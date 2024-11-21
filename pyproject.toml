@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "parking-automation"
+version = "0.1.0"
+description = ""
+authors = ["sepehr-masihpour"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.5"
+pydantic = "^2.9.2"
+python-dotenv = "^1.0.1"
+DateTime = "^5.5"
+uvicorn = "^0.32.0"
+gunicorn = "^23.0.0"
+qrcode = "^8.0"
+pillow = "^11.0.0"
+schedule = "^1.2.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
