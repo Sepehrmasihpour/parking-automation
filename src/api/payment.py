@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi.responses import RedirectResponse
-from schema import common as common_schema
-from db import crud
+from src.schema import common as common_schema
+from src.db import crud
 
 router = APIRouter()
 

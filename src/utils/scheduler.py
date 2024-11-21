@@ -1,7 +1,7 @@
 import threading
 import schedule
 import time
-from db import crud  # Assuming you have this function in your db module
+from src.db import crud  # Assuming you have this function in your db module
 
 
 # Function to run the scheduler

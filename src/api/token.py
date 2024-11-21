@@ -1,20 +1,19 @@
 from fastapi import APIRouter, HTTPException
-from utils import qr_code
-from db import crud
-from schema import common as common_schema
+from fastapi.responses import StreamingResponse
+from src.utils import qr_code
+from src.db import crud
+from src.schema import common as common_schema
 
 router = APIRouter()
 
 
 # Endpoint to create a new parking token and generate QR code
-@router.post("/create_token", response_model=common_schema.CommonMessage)
+@router.post("/create")
 async def create_token():
-
     token_id = crud.create_parking_token()
-    qr_filename = qr_code.generate_payment_qr(token_id)
-    return {
-        "message": f"Parking token created with ID {token_id}. QR code saved as {qr_filename}."
-    }
+    img_byte_arr = qr_code.generate_payment_qr(token_id)
+    headers = {"Content-Disposition": f'attachment; filename="qrcode_{token_id}.png"'}
+    return StreamingResponse(img_byte_arr, media_type="image/png", headers=headers)
 
 
 @router.get("/check/{token_id}")
