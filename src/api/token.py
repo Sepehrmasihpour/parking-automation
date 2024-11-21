@@ -7,7 +7,6 @@ from src.schema import common as common_schema
 router = APIRouter()
 
 
-# Endpoint to create a new parking token and generate QR code
 @router.post("/create")
 async def create_token():
     token_id = crud.create_parking_token()

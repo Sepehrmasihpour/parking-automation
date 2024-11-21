@@ -3,7 +3,7 @@ import sqlite3
 conn = sqlite3.connect("parking.db")
 c = conn.cursor()
 
-# Create the parking_tokens table
+
 c.execute(
     """
     CREATE TABLE IF NOT EXISTS parking_tokens (
@@ -14,7 +14,7 @@ c.execute(
     """
 )
 
-# Create the GATE_STATUS table
+
 c.execute(
     """
     CREATE TABLE IF NOT EXISTS GATE (

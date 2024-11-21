@@ -42,7 +42,7 @@ def get_paid_status(token_id: int):
     if result is not None:
         return bool(result[0])
     else:
-        return None  # Or raise an exception if token not found
+        return None
 
 
 # Function to generate a QR code linking to the payment page
@@ -67,7 +67,7 @@ def get_gate_status(name: Literal["entry", "exit"]):
     if result is not None:
         return bool(result[0])
     else:
-        return None  # Or raise an exception if gate not found
+        return None
 
 
 def change_gate_status(name: Literal["entry", "exit"], status: bool):
