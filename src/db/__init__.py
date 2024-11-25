@@ -1,33 +1,8 @@
-import sqlite3
+from src.config import Settings as settings
+import motor.motor_asyncio
+import redis.asyncio as redis
 
-conn = sqlite3.connect("parking.db")
-c = conn.cursor()
-
-
-c.execute(
-    """
-    CREATE TABLE IF NOT EXISTS parking_tokens (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        is_paid BOOLEAN NOT NULL DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """
+db = motor.motor_asyncio.AsyncIOMotorClient(settings.db_uri).get_database(
+    settings.db_name
 )
-
-
-c.execute(
-    """
-    CREATE TABLE IF NOT EXISTS GATE (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        open BOOLEAN NOT NULL DEFAULT 0
-    )
-    """
-)
-
-
-c.execute("INSERT OR IGNORE INTO GATE (name, open) VALUES ('entry', 0)")
-c.execute("INSERT OR IGNORE INTO GATE (name, open) VALUES ('exit', 0)")
-
-conn.commit()
-conn.close()
+redis_client = redis.from_url(settings.redis_url)

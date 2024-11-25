@@ -1,0 +1,59 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo
+      - redis
+    env_file:
+      - .env
+    environment:
+      - DB_URI=${DB_URI}
+      - DB_NAME=${DB_NAME}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ACCESS_SECS=${JWT_ACCESS_SECS}
+      - JWT_REFRESH_SECS=${JWT_REFRESH_SECS}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JIBIT_API_KEY=${JIBIT_API_KEY}
+      - JIBIT_SECRET_KEY=${JIBIT_SECRET_KEY}
+      - SMS_SERVICE_API_KEY=${SMS_SERVICE_API_KEY}
+      - WEBSERVER_HOST=${WEBSERVER_HOST}
+      - WEBSERVER_PORT=${WEBSERVER_PORT}
+    volumes:
+      - .:/app
+    networks:
+      - backend
+
+  mongo:
+    image: mongo:4.4
+    ports:
+      - "27018:27017"
+    env_file:
+      - .env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${DB_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
+      - MONGO_INITDB_DATABASE=${DB_NAME}
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - backend
+
+  redis:
+    image: redis:7.0
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  redis-data:
