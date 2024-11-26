@@ -5,7 +5,7 @@ from fastapi.security import (
     HTTPBearer,
     OAuth2PasswordRequestForm,
 )
-from src.db import user, auth, role
+from src.db import user, auth
 from src.db import redis_client as redis
 from src.schemas import auth as auth_schema
 from src.schemas import common as common_schema
