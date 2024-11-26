@@ -5,9 +5,6 @@ from fastapi.security import (
     OAuth2PasswordBearer,
 )
 from src.core import auth
-from src.db import role, user, apartment, occupancy
-from typing import List, Literal, Union
-from bson import ObjectId
 from src.db import redis_client
 
 # Define the security scheme
