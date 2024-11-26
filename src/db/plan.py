@@ -24,16 +24,6 @@ async def create_plan(plan_data: Plan):
         print(f"error:{e}")
 
 
-async def get_plan_by_user_id(user_id: Union[str, ObjectId]):
-    try:
-        user_id = ObjectId(user_id) if isinstance(user_id, str) else user_id
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid plan ID format.",
-        )
-
-
 async def get_plan_by_id(id: Union[str, ObjectId]):
     try:
         id = ObjectId(id) if isinstance(id, str) else id
@@ -44,6 +34,23 @@ async def get_plan_by_id(id: Union[str, ObjectId]):
         )
     try:
         plan = await db.plan.find_one({"_id": id})
+        return plan
+    except PyMongoError as e:
+        print(f"db error:{e}")
+    except Exception as e:
+        print(f"error:{e}")
+
+
+async def get_plan_by_user_id(id: Union[str, ObjectId]):
+    try:
+        id = ObjectId(id) if isinstance(id, str) else id
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid plan ID format.",
+        )
+    try:
+        plan = await db.plan.find_one({"user_id": id})
         return plan
     except PyMongoError as e:
         print(f"db error:{e}")
@@ -71,7 +78,11 @@ async def renew_plan_by_id(id: Union[ObjectId, str], time_to_add: timedelta):
             )
 
         current_expiry_date = plan["expiry_date"]
-        new_expiry_date = current_expiry_date + time_to_add
+        new_expiry_date = (
+            current_expiry_date + time_to_add
+            if current_expiry_date < datetime.now()
+            else datetime.now() + time_to_add
+        )
 
         # Update the expiry_date in the database
         result = await db.plan.find_one_and_update(
