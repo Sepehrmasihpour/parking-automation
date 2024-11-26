@@ -5,9 +5,9 @@ from src.db import db, redis_client
 from src.api import auth, parking, plan
 
 app = FastAPI()
-app.include_router(router=auth.router, prefix="/auth", tags="AUTH")
-app.include_router(router=parking.router, prefix="/parking", tags="PARKING")
-app.include_router(router=plan.router, prefix="/plan", tags="PLAN")
+app.include_router(router=auth.router, prefix="/auth", tags=["AUTH"])
+app.include_router(router=parking.router, prefix="/parking", tags=["PARKING"])
+app.include_router(router=plan.router, prefix="/plan", tags=["PLAN"])
 
 # * Health check endpoint sophisticate it more later
 
