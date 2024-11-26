@@ -15,6 +15,8 @@ class Ticket(BaseModel):
     used_for_entry: bool = False
     used_for_exit: bool = False
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
 
 async def create_ticket(ticket_data: Ticket):
     try:
