@@ -8,7 +8,7 @@ from src.core import dependecies
 router = APIRouter()
 
 
-@router.post("/ticket", response_model=parking_schema.ReqPostTicket)
+@router.post("/ticket", response_model=parking_schema.RespPostTicket)
 async def create_ticket(parking_id: str, user_id=Depends(dependecies.jwt_required)):
     user_plan = await plan.get_plan_by_user_id(id=user_id)
     if user_plan is None:
