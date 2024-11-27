@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Union, Literal
 
 
 class ReqRegisterUser(BaseModel):

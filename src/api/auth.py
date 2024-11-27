@@ -200,13 +200,6 @@ async def change_user_role(
 ):
     try:
         if is_admin:
-            user_data = await user.get_user_by_id(user_id)
-            user_role = user_data.get("role")
-            if not user_role == "admin":
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="you do not have permission",
-                )
             await user.update_user_instance(
                 id=payload.target_user_id, update_query={"role": payload.role}
             )
