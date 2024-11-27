@@ -5,7 +5,7 @@ from fastapi.security import (
     OAuth2PasswordBearer,
 )
 from src.core import auth
-from src.db import redis_client
+from src.db import redis_client, user
 
 # Define the security scheme
 security = HTTPBearer()
@@ -28,6 +28,17 @@ async def jwt_required(token: str = Depends(oauth2_scheme)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+    return user_id
+
+
+async def user_is_validated(user_id=Depends(jwt_required)):
+    user_data = await user.get_user_by_id(id=user_id)
+    user_is_validated = True if user_data.get("validated") else False
+    if not user_is_validated:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="this user is not validated",
+        )
     return user_id
 
 

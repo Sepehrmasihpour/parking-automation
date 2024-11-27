@@ -100,7 +100,7 @@ async def login_by_password(form_data: OAuth2PasswordRequestForm = Depends()):
     return resp
 
 
-@router.post("/validate/otp/issue", response_model=common_schema.CommonMessage)
+@router.post("/validate/issue", response_model=common_schema.CommonMessage)
 async def issue_otp(user_id=Depends(dependecies.jwt_required)):
     user_instance = await user.get_user_by_id(id=user_id)
 

@@ -25,7 +25,9 @@ async def get_user_plan(user_id=Depends(dependecies.jwt_required)):
 
 
 @router.post("/create", response_model=common_schema.CommonMessage)
-async def create_plan(expiry_date: datetime, user_id=Depends(dependecies.jwt_required)):
+async def create_plan(
+    expiry_date: datetime, user_id=Depends(dependecies.user_is_validated)
+):
     user_has_plan = (
         True if await plan.get_plan_by_user_id(id=user_id) is not None else False
     )
