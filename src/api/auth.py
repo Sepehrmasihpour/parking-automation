@@ -5,7 +5,7 @@ from fastapi.security import (
     HTTPBearer,
     OAuth2PasswordRequestForm,
 )
-from src.db import user, auth
+from src.db import user, auth, parking
 from src.db import redis_client as redis
 from src.schemas import auth as auth_schema
 from src.schemas import common as common_schema
@@ -54,11 +54,13 @@ async def register(register_data: auth_schema.ReqRegisterUser):
     auth_passport_instance = auth.AuthPassport(
         password_hash=None, otp_secret=otp_secret
     )
+    parking_history_instance = parking.ParkingHistory()
     user_instance = user.User(
         user_name=register_data.user_name,
         phone_number=register_data.phone_number,
         created_at=datetime.now(),
         passport_id=auth_passport_instance.id,
+        parking_history_id=parking_history_instance.id,
     )
 
     await auth.create_auth(user_id=user_instance.id)
@@ -68,6 +70,7 @@ async def register(register_data: auth_schema.ReqRegisterUser):
         passport_id=auth_passport_instance.id,
         user_id=user_instance.id,
     )
+    await parking.create_parking_history_instance(parking_history_instance)
 
     await user.create_user(user_data=user_instance)
     return {"msg": "Registered"}
