@@ -2,7 +2,7 @@ services:
   app:
     build: .
     ports:
-      - "8001:8001"
+      - "8000:8000"
     depends_on:
       - mongo
       - redis
@@ -16,8 +16,6 @@ services:
       - JWT_ACCESS_SECS=${JWT_ACCESS_SECS}
       - JWT_REFRESH_SECS=${JWT_REFRESH_SECS}
       - JWT_ALGORITHM=${JWT_ALGORITHM}
-      - JIBIT_API_KEY=${JIBIT_API_KEY}
-      - JIBIT_SECRET_KEY=${JIBIT_SECRET_KEY}
       - SMS_SERVICE_API_KEY=${SMS_SERVICE_API_KEY}
       - WEBSERVER_HOST=${WEBSERVER_HOST}
       - WEBSERVER_PORT=${WEBSERVER_PORT}
@@ -29,7 +27,7 @@ services:
   mongo:
     image: mongo:4.4
     ports:
-      - "27019:27019"
+      - "27018:27017"
     env_file:
       - .env
     environment:
@@ -44,7 +42,7 @@ services:
   redis:
     image: redis:7.0
     ports:
-      - "6377:6377"
+      - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
