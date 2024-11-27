@@ -51,7 +51,7 @@ async def create_ticket(parking_id: str):
     return {"ticket_id": str(ticket_id)}
 
 
-@router.delete("/ticket", common_schema.CommonMessage)
+@router.delete("/ticket", response_model=common_schema.CommonMessage)
 async def delete_ticket(ticket_id: str, user_id=Depends(dependecies.jwt_required)):
     await ticket.delete_ticket_by_id(ticket_id)
     return {"msg": "ticket deleted"}
