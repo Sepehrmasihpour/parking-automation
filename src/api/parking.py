@@ -44,7 +44,6 @@ async def create_ticket(parking_id: str):
     ticket_data = ticket.Ticket(
         expiry_date=datetime.now() + timedelta(minutes=30),
         parking_id=ObjectId(parking_id),
-        parking_id=ObjectId(parking_id),
         price=parking_price,
     )
     await ticket.create_ticket(ticket_data)
