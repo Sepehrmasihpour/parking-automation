@@ -9,22 +9,6 @@ from bson import ObjectId
 router = APIRouter()
 
 
-@router.get("/status", response_model=plan_schema.RespGetstatus)
-async def get_user_plan(user_id=Depends(dependecies.jwt_required)):
-    user_plan = await plan.get_plan_by_user_id(id=user_id)
-    if user_plan is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="no plan with this user_id found",
-        )
-    serialized_plan = plan_schema.RespGetstatus(
-        id=str(user_plan.get("_id")),
-        expiry_date=user_plan.get("expiry_date"),
-        user_id=user_id,
-    )
-    return serialized_plan
-
-
 @router.post("/create", response_model=common_schema.CommonMessage)
 async def create_plan(
     expiry_date: datetime, user_id=Depends(dependecies.user_is_validated)

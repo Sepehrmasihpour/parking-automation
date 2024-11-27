@@ -1,7 +1,7 @@
 from src.db import db
 from pydantic import BaseModel, Field, ConfigDict
 from bson import ObjectId
-from typing import Union, List, Optional, Dict
+from typing import Union, List, Optional, Dict, Any
 from pymongo.errors import PyMongoError
 from datetime import datetime
 from fastapi import HTTPException, status
@@ -73,9 +73,14 @@ async def get_usable_ticket_by_user_id(id: Union[str, ObjectId], skip: int, limi
         )
     try:
         current_time = datetime.now()
-        data = await db.ticket.find(
-            {"user_id": id, "active": True, "expiry_date": {"$gt": current_time}}
+        data = (
+            db.ticket.find(
+                {"user_id": id, "active": True, "expiry_date": {"$gt": current_time}}
+            )
+            .skip(skip)
+            .limit(limit)
         )
+        return await data.to_list(length=None)
 
     except PyMongoError as e:
         print(f"db error:{e}")
@@ -97,3 +102,8 @@ async def delete_ticket_by_id(id: Union[str, ObjectId]):
         print(f"db error:{e}")
     except Exception as e:
         print(f"error:{e}")
+
+
+async def get_ticket_count(query: Dict[str, Any]) -> int:
+    document_count = await db.ticket.count_documents(query)
+    return document_count

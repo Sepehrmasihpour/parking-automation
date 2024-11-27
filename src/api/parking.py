@@ -30,6 +30,8 @@ async def create_ticket(parking_id: str, user_id=Depends(dependecies.jwt_require
         is_paid=True,
     )
     user_data = await user.get_user_by_id(user_id)
+    parking_history_id = user_data.get("parking_history_id")
+    await parking.add_parking_to_parking_history(parking_history_id, parking_id)
     await ticket.create_ticket(ticket_data)
     ticket_id = ticket_data.id
     return {"ticket_id": str(ticket_id)}

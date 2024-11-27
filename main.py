@@ -2,12 +2,13 @@ import subprocess
 from src.config import settings
 from fastapi import FastAPI, HTTPException
 from src.db import db, redis_client
-from src.api import auth, parking, plan
+from src.api import auth, parking, plan, user
 
 app = FastAPI()
-app.include_router(router=auth.router, prefix="/auth", tags=["AUTH"])
-app.include_router(router=parking.router, prefix="/parking", tags=["PARKING"])
-app.include_router(router=plan.router, prefix="/plan", tags=["PLAN"])
+app.include_router(router=auth.router, prefix="/auth", tags=["Auth"])
+app.include_router(router=user.router, prefix="/user", tags=["user"])
+app.include_router(router=parking.router, prefix="/parking", tags=["Parking"])
+app.include_router(router=plan.router, prefix="/plan", tags=["Plan"])
 
 # * Health check endpoint sophisticate it more later
 

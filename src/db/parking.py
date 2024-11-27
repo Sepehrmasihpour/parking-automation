@@ -7,6 +7,7 @@ from pymongo.errors import PyMongoError
 
 class Parking(BaseModel):
     id: ObjectId = Field(default_factory=ObjectId, alias="-id")
+    name: str
     entry_door_open: bool
     price: int
     exit_door_open: bool
