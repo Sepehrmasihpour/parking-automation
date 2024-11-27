@@ -55,7 +55,7 @@ async def register(register_data: auth_schema.ReqRegisterUser):
         password_hash=None, otp_secret=otp_secret
     )
     user_instance = user.User(
-        user_name=register_data.first_name,
+        user_name=register_data.user_name,
         phone_number=register_data.phone_number,
         created_at=datetime.now(),
         passport_id=auth_passport_instance.id,
