@@ -191,3 +191,27 @@ async def logout(access_token=Depends(dependecies.get_access_token)):
     redis.setex(access_token, ttl, "blacklisted")
 
     return common_schema.CommonMessage(message="Successfully logged out")
+
+
+@router.post("/Update/role", response_model=common_schema.CommonMessage)
+async def change_user_role(
+    payload: auth_schema.ReqPostUpdateRole,
+    is_admin=Depends(dependecies.admin_is_required),
+):
+    try:
+        if is_admin:
+            user_data = await user.get_user_by_id(user_id)
+            user_role = user_data.get("role")
+            if not user_role == "admin":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="you do not have permission",
+                )
+            await user.update_user_instance(
+                id=payload.target_user_id, update_query={"role": payload.role}
+            )
+            return {"msg": "role updated"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )

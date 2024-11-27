@@ -10,6 +10,22 @@ from bson import ObjectId
 router = APIRouter()
 
 
+@router.post("/create", response_model=common_schema.CommonMessage)
+async def create_parking_instance(
+    payload: parking_schema.ReqPostCreate,
+    is_admin=Depends(dependecies.admin_is_required),
+):
+    try:
+        if is_admin:
+            parking_instance = parking.Parking(price=payload.price, name=payload.name)
+            await parking.create_parking_instance(parking_data=parking_instance)
+            return {"msg": "the parking has been added to the data base"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
 @router.post("/ticket/user", response_model=parking_schema.RespPostTicket)
 async def create_ticket(parking_id: str, user_id=Depends(dependecies.jwt_required)):
     user_plan = await plan.get_plan_by_user_id(id=user_id)

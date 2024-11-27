@@ -20,3 +20,8 @@ class RespLogin(BaseModel):
 class RespRefreshToken(BaseModel):
     access_token: str
     refresh_token: str
+
+
+class ReqPostUpdateRole(BaseModel):
+    target_user_id: str
+    role: Union[Literal["admin"], None]

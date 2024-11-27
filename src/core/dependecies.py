@@ -42,6 +42,17 @@ async def user_is_validated(user_id=Depends(jwt_required)):
     return user_id
 
 
+async def admin_is_required(user_id=Depends(jwt_required)):
+    user_data = await user.get_user_by_id(user_data)
+    user_role = user_data.get("role")
+    if not user_role == "adming":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="you do not have permission",
+        )
+    return True
+
+
 async def get_access_token(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> str:

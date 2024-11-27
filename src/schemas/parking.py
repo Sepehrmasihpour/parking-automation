@@ -8,3 +8,8 @@ class ReqPostEnterExit(BaseModel):
 
 class RespPostTicket(BaseModel):
     ticket_id: str
+
+
+class ReqPostCreate(BaseModel):
+    price: int
+    name: str

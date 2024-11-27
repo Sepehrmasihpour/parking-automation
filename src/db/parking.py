@@ -8,10 +8,10 @@ from pymongo.errors import PyMongoError
 class Parking(BaseModel):
     id: ObjectId = Field(default_factory=ObjectId, alias="-id")
     name: str
-    entry_door_open: bool
+    entry_door_open: bool = False
     price: int
-    exit_door_open: bool
-    capacity_full: bool
+    exit_door_open: bool = False
+    capacity_full: bool = False
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

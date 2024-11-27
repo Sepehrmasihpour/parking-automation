@@ -1,7 +1,7 @@
 from src.db import db
 from pydantic import BaseModel, Field, ConfigDict
 from bson import ObjectId
-from typing import Union, Dict
+from typing import Union, Dict, Optional, Literal
 from pymongo.errors import PyMongoError
 from datetime import datetime
 
@@ -14,6 +14,7 @@ class User(BaseModel):
     passport_id: ObjectId
     parking_history_id: ObjectId
     created_at: datetime
+    role: Optional[Literal["admin"]] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
