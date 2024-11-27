@@ -12,6 +12,7 @@ class User(BaseModel):
     phone_number: str
     validated: bool = False
     passport_id: ObjectId
+    parking_history_id: ObjectId
     created_at: datetime
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

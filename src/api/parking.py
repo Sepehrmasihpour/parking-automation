@@ -1,17 +1,17 @@
 from fastapi import APIRouter, HTTPException, Depends, status
-from src.db import parking, ticket, plan
+from src.db import parking, ticket, plan, user
 from src.schemas import parking as parking_schema
 from src.schemas import common as common_schema
 from datetime import datetime, timedelta
 from src.core import dependecies
+from typing import Optional
+from bson import ObjectId
 
 router = APIRouter()
 
 
-@router.post("/ticket", response_model=parking_schema.RespPostTicket)
-async def create_ticket(
-    parking_id: str, user_id=Depends(dependecies.user_is_validated)
-):
+@router.post("/ticket/user", response_model=parking_schema.RespPostTicket)
+async def create_ticket(parking_id: str, user_id=Depends(dependecies.jwt_required)):
     user_plan = await plan.get_plan_by_user_id(id=user_id)
     if user_plan is None:
         raise HTTPException(
@@ -25,12 +25,35 @@ async def create_ticket(
         )
     ticket_data = ticket.Ticket(
         expiry_date=datetime.now() + timedelta(hours=24),
-        user_id=user_id,
-        parking_id=parking_id,
+        user_id=ObjectId(user_id),
+        parking_id=ObjectId(parking_id),
+        is_paid=True,
+    )
+    user_data = await user.get_user_by_id(user_id)
+    await ticket.create_ticket(ticket_data)
+    ticket_id = ticket_data.id
+    return {"ticket_id": str(ticket_id)}
+
+
+@router.post("/ticket/guest", response_model=parking_schema.RespPostTicket)
+async def create_ticket(parking_id: str):
+    parking_data = await parking.get_parking_by_id(parking_id)
+    parking_price = parking_data.get("price")
+    ticket_data = ticket.Ticket(
+        expiry_date=datetime.now() + timedelta(minutes=30),
+        parking_id=ObjectId(parking_id),
+        parking_id=ObjectId(parking_id),
+        price=parking_price,
     )
     await ticket.create_ticket(ticket_data)
     ticket_id = ticket_data.id
     return {"ticket_id": str(ticket_id)}
+
+
+@router.delete("/ticket", common_schema.CommonMessage)
+async def delete_ticket(ticket_id: str, user_id=Depends(dependecies.jwt_required)):
+    await ticket.delete_ticket_by_id(ticket_id)
+    return {"msg": "ticket deleted"}
 
 
 @router.post("/enter", response_model=common_schema.CommonMessage)
@@ -59,6 +82,11 @@ async def enter_parking(payload: parking_schema.ReqPostEnterExit):
             status_code=status.HTTP_409_CONFLICT,
             detail="You already used this ticket for entry",
         )
+    if not ticket.get("is_paid"):
+        # * The logic for physical card reader in the location goes here
+        # * if the reader returns true than the below will happed"
+        await ticket.update_ticket_by_id(payload.ticket_id, {"is_paid": True})
+
     # * The logic for opening the gate goes here
     await ticket.update_ticket_by_id(
         id=payload.ticket_id, update_query={"used_for_entry": True}
@@ -96,7 +124,7 @@ async def enter_parking(payload: parking_schema.ReqPostEnterExit):
     # * The logic for closing the gate goes here
 
     await ticket.update_ticket_by_id(
-        id=payload.ticket_id, update_query={"used_for_exit": True}
+        id=payload.ticket_id, update_query={"used_for_exit": True, "active": False}
     )
 
     return {"msg": "the gate opened"}

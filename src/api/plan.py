@@ -4,6 +4,7 @@ from src.schemas import plan as plan_schema
 from src.schemas import common as common_schema
 from datetime import datetime, timedelta
 from src.core import dependecies
+from bson import ObjectId
 
 router = APIRouter()
 
@@ -37,7 +38,7 @@ async def create_plan(
             detail="There is already a plan assigned to this user id",
         )
     # * Payment code goes here
-    plan_data = plan.Plan(expiry_date=expiry_date, user_id=user_id)
+    plan_data = plan.Plan(expiry_date=expiry_date, user_id=ObjectId(user_id))
     await plan.create_plan(plan_data)
     return {"msg": "the plan has been created"}
 
