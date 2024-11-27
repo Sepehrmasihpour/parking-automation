@@ -20,6 +20,8 @@ class ParkingHistory(BaseModel):
     id: ObjectId = Field(default_factory=ObjectId, alias="-id")
     parking_history: List[ObjectId]
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
 
 async def create_parking_instance(parking_data: Parking):
     try:
