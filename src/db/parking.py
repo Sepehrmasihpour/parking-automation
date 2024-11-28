@@ -1,7 +1,7 @@
 from src.db import db
 from pydantic import BaseModel, Field, ConfigDict
 from bson import ObjectId
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Optional
 from pymongo.errors import PyMongoError
 
 
@@ -18,7 +18,7 @@ class Parking(BaseModel):
 
 class ParkingHistory(BaseModel):
     id: ObjectId = Field(default_factory=ObjectId, alias="-id")
-    parking_history: List[ObjectId]
+    parking_history: Optional[List[ObjectId]] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
