@@ -1,10 +1,26 @@
+import os
 import jwt
 import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-import os
+from passlib.context import CryptContext  # type: ignore
+from src.config import settings
 
 load_dotenv()
+
+
+class Password:
+
+    def __init__(self):
+        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+    def secure_pwd(self, raw_password):
+        hashed = self.pwd_context.hash(raw_password)
+        return hashed
+
+    def verify_pwd(self, plain, password_hash):
+        return self.pwd_context.verify(plain, password_hash)
+
 
 # Environment Variables
 JWT_SECRET = os.getenv("JWT_SECRET_KEY")
