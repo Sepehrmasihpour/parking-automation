@@ -3,55 +3,132 @@ import jwt
 import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from passlib.context import CryptContext  # type: ignore
-from src.config import settings
+from passlib.context import CryptContext
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 
+# Load environment variables
 load_dotenv()
+
+# Configuration
+JWT_SECRET = os.getenv("JWT_SECRET_KEY")  # Matches .env variable
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")  # Defaults to HS256
+JWT_ACCESS_TOKEN_EXPIRY_PER_SECOND = int(os.getenv("JWT_ACCESS_SECS"))
+JWT_REFRESH_TOKEN_EXPIRY_PER_SECOND = int(os.getenv("JWT_REFRESH_SECS"))
 
 
 class Password:
-
     def __init__(self):
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-    def secure_pwd(self, raw_password):
-        hashed = self.pwd_context.hash(raw_password)
-        return hashed
+    def secure_pwd(self, raw_password: str) -> str:
+        """
+        Hash a plain-text password securely.
+        """
+        return self.pwd_context.hash(raw_password)
 
-    def verify_pwd(self, plain, password_hash):
+    def verify_pwd(self, plain: str, password_hash: str) -> bool:
+        """
+        Verify if a plain-text password matches the hashed password.
+        """
         return self.pwd_context.verify(plain, password_hash)
 
 
-# Environment Variables
-JWT_SECRET = os.getenv("JWT_SECRET_KEY")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")
-JWT_ACCESS_TOKEN_EXPIRY_PER_SECOND = int(os.getenv("JWT_ACCESS_SECS", 300))
-JWT_REFRESH_TOKEN_EXPITRY_PER_SECOND = int(os.getenv("JWT_REFRESH_SECS", 600))
-
-
 def create_access_token(user_id: str, expires_delta: int = None) -> str:
-    if expires_delta is None:
-        expires_delta = timedelta(seconds=JWT_ACCESS_TOKEN_EXPIRY_PER_SECOND)
-    elif isinstance(expires_delta, int):
-        expires_delta = timedelta(seconds=expires_delta)
-
-    to_encode = {"exp": datetime.utcnow() + expires_delta, "user_id": user_id}
-    encoded_jwt = jwt.encode(to_encode, key=JWT_SECRET, algorithm=JWT_ALGORITHM)
+    """
+    Create a JWT access token with an optional expiration time.
+    """
+    expiry = datetime.utcnow() + (
+        timedelta(seconds=expires_delta)
+        if expires_delta is not None
+        else timedelta(seconds=JWT_ACCESS_TOKEN_EXPIRY_PER_SECOND)
+    )
+    to_encode = {"exp": expiry, "user_id": user_id}
+    try:
+        encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    except Exception as e:
+        raise ValueError(f"Error creating access token: {str(e)}")
     return encoded_jwt
 
 
-def decode_jwt(jwtoken: str):
+def create_refresh_token(user_id: str, expires_delta: int = None) -> str:
+    """
+    Create a JWT refresh token with an optional expiration time.
+    """
+    expiry = datetime.utcnow() + (
+        timedelta(seconds=expires_delta)
+        if expires_delta is not None
+        else timedelta(seconds=JWT_REFRESH_TOKEN_EXPIRY_PER_SECOND)
+    )
+    to_encode = {"exp": expiry, "user_id": user_id}
     try:
-        payload = jwt.decode(jwt=jwtoken, key=JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    except Exception as e:
+        raise ValueError(f"Error creating refresh token: {str(e)}")
+    return encoded_jwt
+
+
+def create_token(user_id: str) -> dict:
+    """
+    Generate both access and refresh tokens for a user.
+    """
+    try:
+        return {
+            "access_token": create_access_token(user_id=user_id),
+            "refresh_token": create_refresh_token(user_id=user_id),
+        }
+    except Exception as e:
+        raise ValueError(f"Error creating tokens: {str(e)}")
+
+
+def decode_jwt(jwtoken: str):
+    """
+    Decode a JWT token and return its payload.
+    """
+    try:
+        payload = jwt.decode(jwtoken, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
-    except jwt.ExpiredSignatureError:
+    except ExpiredSignatureError:
+        print("Token has expired.")
         return None
-    except jwt.InvalidTokenError:
+    except InvalidTokenError:
+        print("Invalid token.")
+        return None
+    except Exception as e:
+        print(f"Error decoding token: {str(e)}")
         return None
 
 
-def parse_authorization_token(token: str):
-    parts = token.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise ValueError("Invalid token format")
-    return parts[1]
+def check_epoch_time(epoch_time: str) -> bool:
+    """
+    Check if the given epoch time (string or float) is in the future.
+    """
+    try:
+        epoch_time = float(epoch_time)
+        return epoch_time > time.time()
+    except ValueError as e:
+        raise ValueError(f"Invalid epoch time: {epoch_time}. Error: {str(e)}")
+
+
+def refresh_token(refresh_token: str, user_id: str) -> dict:
+    """
+    Generate new access and refresh tokens from a given refresh token.
+    """
+    try:
+        new_access_token = create_access_token(user_id=user_id)
+        new_refresh_token = create_refresh_token(user_id=user_id)
+        return {"access_token": new_access_token, "refresh_token": new_refresh_token}
+    except Exception as e:
+        raise ValueError(f"Error refreshing token: {str(e)}")
+
+
+def parse_authorization_token(token: str) -> str:
+    """
+    Parse a Bearer token from an authorization header.
+    """
+    try:
+        parts = token.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            raise ValueError("Invalid token format. Expected 'Bearer <token>'.")
+        return parts[1]
+    except Exception as e:
+        raise ValueError(f"Error parsing token: {str(e)}")
