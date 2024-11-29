@@ -9,10 +9,21 @@ from src.db import redis_client, user
 
 # Define the security scheme
 security = HTTPBearer()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/password")
 
 
-async def jwt_required(token: str = Depends(oauth2_scheme)):
+async def get_access_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> str:
+    access_token = credentials.credentials
+
+    # Optionally, add validation for token format
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Authorization token is missing")
+
+    return access_token
+
+
+async def jwt_required(token=Depends(get_access_token)):
     access_token = token
 
     # Check if token is blacklisted
@@ -43,7 +54,7 @@ async def user_is_validated(user_id=Depends(jwt_required)):
 
 
 async def admin_is_required(user_id=Depends(jwt_required)):
-    user_data = await user.get_user_by_id(user_data)
+    user_data = await user.get_user_by_id(user_id)
     user_role = user_data.get("role")
     if not user_role == "adming":
         raise HTTPException(
@@ -51,15 +62,3 @@ async def admin_is_required(user_id=Depends(jwt_required)):
             detail="you do not have permission",
         )
     return True
-
-
-async def get_access_token(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-) -> str:
-    access_token = credentials.credentials
-
-    # Optionally, add validation for token format
-    if not access_token:
-        raise HTTPException(status_code=401, detail="Authorization token is missing")
-
-    return access_token

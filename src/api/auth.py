@@ -77,7 +77,7 @@ async def register(register_data: auth_schema.ReqRegisterUser):
 
 
 @router.post("/login/password", response_model=auth_schema.RespLogin)
-async def login_by_password(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login_by_password(form_data: auth_schema.ReqLoginPassword):
     user_name = form_data.username
     password = form_data.password
 

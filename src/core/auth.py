@@ -116,7 +116,12 @@ def refresh_token(refresh_token: str, user_id: str) -> dict:
     try:
         new_access_token = create_access_token(user_id=user_id)
         new_refresh_token = create_refresh_token(user_id=user_id)
-        return {"access_token": new_access_token, "refresh_token": new_refresh_token}
+
+        return {
+            "access_token": new_access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer",
+        }
     except Exception as e:
         raise ValueError(f"Error refreshing token: {str(e)}")
 

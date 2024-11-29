@@ -9,7 +9,7 @@ class ReqRegisterUser(BaseModel):
 
 
 class ReqLoginPassword(BaseModel):
-    user_name: str
+    username: str
     password: str
 
 
