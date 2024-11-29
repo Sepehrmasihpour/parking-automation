@@ -58,7 +58,7 @@ async def get_parking_by_id(id: Union[str, ObjectId]):
 
 async def create_parking_history_instance(instance: ParkingHistory):
     try:
-        await db.parhing_history.insert_one(instance.model_dump(by_alias=True))
+        await db.parking_history.insert_one(instance.model_dump(by_alias=True))
     except PyMongoError as e:
         print(f"db error:{e}")
     except Exception as e:
