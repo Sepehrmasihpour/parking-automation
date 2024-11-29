@@ -6,7 +6,7 @@ from pymongo.errors import PyMongoError
 
 
 class Parking(BaseModel):
-    id: ObjectId = Field(default_factory=ObjectId, alias="-id")
+    id: ObjectId = Field(default_factory=ObjectId, alias="_id")
     name: str
     entry_door_open: bool = False
     price: int
@@ -17,7 +17,7 @@ class Parking(BaseModel):
 
 
 class ParkingHistory(BaseModel):
-    id: ObjectId = Field(default_factory=ObjectId, alias="-id")
+    id: ObjectId = Field(default_factory=ObjectId, alias="_id")
     parking_history: Optional[List[ObjectId]] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
