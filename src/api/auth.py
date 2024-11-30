@@ -1,5 +1,5 @@
 import pyotp
-from fastapi import APIRouter, HTTPException, Depends, status, Form
+from fastapi import APIRouter, HTTPException, Depends, status, security
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     HTTPBearer,
@@ -14,7 +14,6 @@ from src.services import SmsService
 from src.core import dependecies
 from src.utils import otp
 from datetime import datetime
-from typing import Optional
 
 router = APIRouter()
 passutil = auth_core.Password()
@@ -77,83 +76,40 @@ async def register(register_data: auth_schema.ReqRegisterUser):
     return {"msg": "Registered"}
 
 
-@router.post("/login/token", response_model=auth_schema.RespLogin)
-async def token_endpoint(
-    grant_type: str = Form(
-        ...
-    ),  # Explicitly declare grant_type as a required form field
-    username: Optional[str] = Form(None),  # Optional username for password grant
-    password: Optional[str] = Form(None),  # Optional password for password grant
-    refresh_token: Optional[str] = Form(
-        None
-    ),  # Optional refresh_token for refresh grant
-):
+@router.post("/login/password", response_model=auth_schema.RespLogin)
+async def login_by_password(form_data: OAuth2PasswordRequestForm = Depends()):
     """
-    Unified token endpoint for password and refresh_token grant types.
+    OAuth2-compliant login endpoint using form-encoded data.
     """
-    if grant_type == "password":
-        # Ensure username and password are provided
-        if not username or not password:
-            raise HTTPException(
-                status_code=400,
-                detail="Username and password are required for the password grant type",
-            )
+    # Extract the username and password from the form data
+    user_name = form_data.username
+    password = form_data.password
 
-        # Authenticate the user
-        user_instance = await user.get_user_by_user_name(user_name=username)
-        if not user_instance:
-            raise HTTPException(status_code=400, detail="Invalid credentials")
-
-        passport_id = user_instance.get("passport_id")
-        auth_passport = await auth.get_auth_passport_by_id(auth_passport_id=passport_id)
-        password_hash = auth_passport.get("password_hash")
-
-        is_authenticated = passutil.verify_pwd(
-            plain=password, password_hash=password_hash
-        )
-        if not is_authenticated:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-
-        # Generate tokens
-        user_id = str(user_instance.get("_id"))
-        return {
-            "access_token": auth_core.create_access_token(user_id=user_id),
-            "refresh_token": auth_core.create_refresh_token(user_id=user_id),
-        }
-
-    elif grant_type == "refresh_token":
-        # Ensure refresh_token is provided
-        if not refresh_token:
-            raise HTTPException(
-                status_code=400,
-                detail="Refresh token is required for the refresh_token grant type",
-            )
-
-        decoded_refresh_token = auth_core.decode_jwt(refresh_token)
-        if not decoded_refresh_token:
-            raise HTTPException(status_code=401, detail="Invalid refresh token")
-
-        user_id = decoded_refresh_token.get("user_id")
-        refresh_token_exp = decoded_refresh_token.get("exp")
-        current_time = datetime.utcnow().timestamp()
-
-        if not refresh_token_exp or refresh_token_exp < current_time:
-            raise HTTPException(status_code=401, detail="Refresh token expired")
-
-        refresh_token_ttl = int(refresh_token_exp - current_time)
-        redis.setex(refresh_token.refresh_token, refresh_token_ttl, "blacklisted")
-
-        # Issue new tokens
-        return {
-            "access_token": auth_core.create_access_token(user_id=user_id),
-            "refresh_token": auth_core.create_refresh_token(user_id=user_id),
-        }
-
-    else:
+    # Fetch the user from the database
+    user_instance = await user.get_user_by_user_name(user_name=user_name)
+    if not user_instance:
         raise HTTPException(
-            status_code=400,
-            detail="Unsupported grant_type",
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid credentials"
         )
+
+    # Validate the password
+    passport_id = user_instance.get("passport_id")
+    auth_passport = await auth.get_auth_passport_by_id(auth_passport_id=passport_id)
+    password_hash = auth_passport.get("password_hash")
+
+    is_authenticated = passutil.verify_pwd(plain=password, password_hash=password_hash)
+    if not is_authenticated:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        )
+
+    # Generate access and refresh tokens
+    user_id = str(user_instance.get("_id"))
+    resp = {
+        "access_token": auth_core.create_access_token(user_id=user_id),
+        "refresh_token": auth_core.create_refresh_token(user_id=user_id),
+    }
+    return resp
 
 
 @router.post("/validate/issue", response_model=common_schema.CommonMessage)
@@ -177,6 +133,33 @@ async def verify_otp(
         raise HTTPException(status_code=400, detail="Invalid OTP")
     await user.update_user_instance(id=user_id, update_query={"validated": True})
     return {"msg": "the acount has been validated"}
+
+
+@router.post("/refresh", response_model=auth_schema.RespRefreshToken)
+async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
+
+    # Check if the refresh token is blacklisted
+    if redis.get(refresh_token.refresh_token) == "blacklisted":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token is blacklisted",
+        )
+
+    decoded_refresh_token = auth_core.decode_jwt(refresh_token.refresh_token)
+    token_user_id = decoded_refresh_token.get("user_id")
+    refresh_token_exp = decoded_refresh_token.get("exp")
+    current_time = datetime.now()
+
+    refresh_token_ttl = int(refresh_token_exp - current_time)
+    redis.setex(refresh_token.refresh_token, refresh_token_ttl, "blacklisted")
+
+    # Generate new tokens
+    resp = dict(
+        access_token=auth_core.create_access_token(token_user_id),
+        refresh_token=auth_core.create_refresh_token(token_user_id),
+    )
+
+    return resp
 
 
 @router.post("/logout", response_model=common_schema.CommonMessage)
