@@ -89,26 +89,9 @@ def decode_jwt(jwtoken: str):
     try:
         payload = jwt.decode(jwtoken, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
-    except ExpiredSignatureError:
-        print("Token has expired.")
-        return None
-    except InvalidTokenError:
-        print("Invalid token.")
-        return None
     except Exception as e:
         print(f"Error decoding token: {str(e)}")
         return None
-
-
-def check_epoch_time(epoch_time: str) -> bool:
-    """
-    Check if the given epoch time (string or float) is in the future.
-    """
-    try:
-        epoch_time = float(epoch_time)
-        return epoch_time > time.time()
-    except ValueError as e:
-        raise ValueError(f"Invalid epoch time: {epoch_time}. Error: {str(e)}")
 
 
 def parse_authorization_token(token: str) -> str:
