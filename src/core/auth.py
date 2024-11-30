@@ -14,8 +14,8 @@ load_dotenv()
 # Configuration
 JWT_SECRET = os.getenv("JWT_SECRET_KEY")  # Matches .env variable
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")  # Defaults to HS256
-JWT_ACCESS_TOKEN_EXPIRY_PER_SECOND = int(os.getenv("JWT_ACCESS_SECS"))
-JWT_REFRESH_TOKEN_EXPIRY_PER_SECOND = int(os.getenv("JWT_REFRESH_SECS"))
+JWT_ACCESS_TOKEN_EXPIRY_PER_HOURS = int(os.getenv("JWT_ACCESS_HOUR"))
+JWT_REFRESH_TOKEN_EXPIRY_PER_HOURS = int(os.getenv("JWT_REFRESH_HOUR"))
 
 
 class Password:
@@ -40,9 +40,9 @@ def create_access_token(user_id: str, expires_delta: int = None) -> str:
     Create a JWT access token with an optional expiration time.
     """
     expiry = datetime.now() + (
-        timedelta(seconds=expires_delta)
+        timedelta(hours=expires_delta)
         if expires_delta is not None
-        else timedelta(seconds=JWT_ACCESS_TOKEN_EXPIRY_PER_SECOND)
+        else timedelta(hours=JWT_ACCESS_TOKEN_EXPIRY_PER_HOURS)
     )
     to_encode = {"exp": expiry, "user_id": user_id}
     try:
@@ -57,9 +57,9 @@ def create_refresh_token(user_id: str, expires_delta: int = None) -> str:
     Create a JWT refresh token with an optional expiration time.
     """
     expiry = datetime.now() + (
-        timedelta(seconds=expires_delta)
+        timedelta(hours=expires_delta)
         if expires_delta is not None
-        else timedelta(seconds=JWT_REFRESH_TOKEN_EXPIRY_PER_SECOND)
+        else timedelta(hours=JWT_REFRESH_TOKEN_EXPIRY_PER_HOURS)
     )
     to_encode = {"exp": expiry, "user_id": user_id}
     try:
