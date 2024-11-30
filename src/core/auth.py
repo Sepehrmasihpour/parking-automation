@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from passlib.context import CryptContext
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+from src.db import redis_client as redis
+from fastapi import HTTPException, status
 
 # Load environment variables
 load_dotenv()
@@ -37,7 +39,7 @@ def create_access_token(user_id: str, expires_delta: int = None) -> str:
     """
     Create a JWT access token with an optional expiration time.
     """
-    expiry = datetime.utcnow() + (
+    expiry = datetime.now() + (
         timedelta(seconds=expires_delta)
         if expires_delta is not None
         else timedelta(seconds=JWT_ACCESS_TOKEN_EXPIRY_PER_SECOND)
@@ -54,7 +56,7 @@ def create_refresh_token(user_id: str, expires_delta: int = None) -> str:
     """
     Create a JWT refresh token with an optional expiration time.
     """
-    expiry = datetime.utcnow() + (
+    expiry = datetime.now() + (
         timedelta(seconds=expires_delta)
         if expires_delta is not None
         else timedelta(seconds=JWT_REFRESH_TOKEN_EXPIRY_PER_SECOND)
@@ -107,23 +109,6 @@ def check_epoch_time(epoch_time: str) -> bool:
         return epoch_time > time.time()
     except ValueError as e:
         raise ValueError(f"Invalid epoch time: {epoch_time}. Error: {str(e)}")
-
-
-def refresh_token(refresh_token: str, user_id: str) -> dict:
-    """
-    Generate new access and refresh tokens from a given refresh token.
-    """
-    try:
-        new_access_token = create_access_token(user_id=user_id)
-        new_refresh_token = create_refresh_token(user_id=user_id)
-
-        return {
-            "access_token": new_access_token,
-            "refresh_token": new_refresh_token,
-            "token_type": "bearer",
-        }
-    except Exception as e:
-        raise ValueError(f"Error refreshing token: {str(e)}")
 
 
 def parse_authorization_token(token: str) -> str:

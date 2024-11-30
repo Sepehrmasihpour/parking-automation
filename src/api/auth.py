@@ -98,7 +98,6 @@ async def login_by_password(form_data: auth_schema.ReqLoginPassword):
     resp = {
         "access_token": auth_core.create_access_token(user_id=user_id),
         "refresh_token": auth_core.create_refresh_token(user_id=user_id),
-        "token_type": "bearer",
     }
     return resp
 
@@ -124,51 +123,28 @@ async def verify_otp(given_otp: str, user_id=Depends(dependecies.jwt_required)):
 
 
 @router.post("/refresh", response_model=auth_schema.RespRefreshToken)
-async def refresh_token(
-    refresh_token: str, access_token=Depends(dependecies.get_access_token)
-):
-    # Decode the tokens to extract user information
-    decoded_access_token = auth_core.decode_jwt(access_token)
-    decoded_refresh_token = auth_core.decode_jwt(refresh_token)
-
-    if not decoded_access_token or not decoded_refresh_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        )
-
-    access_token_user_id = decoded_access_token.get("user_id")
-    refresh_token_user_id = decoded_refresh_token.get("user_id")
-
-    if access_token_user_id != refresh_token_user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to make this request",
-        )
+async def refresh_token(refresh_token: str):
 
     # Check if the refresh token is blacklisted
-    if redis.get(refresh_token):
+    if redis.get(refresh_token) == "blacklisted":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token is blacklisted",
         )
 
-    # Blacklist old tokens
-    access_token_exp = decoded_access_token.get("exp")
+    decoded_refresh_token = auth_core.decode_jwt(refresh_token)
+    token_user_id = decoded_refresh_token.get("user_id")
     refresh_token_exp = decoded_refresh_token.get("exp")
-    current_time = datetime.utcnow().timestamp()
-
-    if access_token_exp and int(access_token_exp) > current_time:
-        access_token_ttl = int(access_token_exp - current_time)
-        redis.setex(access_token, access_token_ttl, "blacklisted")
+    current_time = datetime.now()
 
     if refresh_token_exp and int(refresh_token_exp) > current_time:
         refresh_token_ttl = int(refresh_token_exp - current_time)
         redis.setex(refresh_token, refresh_token_ttl, "blacklisted")
 
     # Generate new tokens
-    resp = auth_core.refresh_token(
-        refresh_token=refresh_token, user_id=access_token_user_id
+    resp = dict(
+        access_token=auth_core.create_access_token(token_user_id),
+        refresh_token=auth_core.create_refresh_token(token_user_id),
     )
 
     return resp
