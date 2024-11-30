@@ -2,13 +2,11 @@ from src.config import settings
 from kavenegar import KavenegarAPI, APIException, HTTPException
 
 API_KEY = settings.sms_service_api_key
-SENDER_NUMBER = settings.sms_service_sender_number
 
 
 class SmsService:
     def __init__(self) -> None:
         self.api_key = API_KEY
-        self.sender_number = SENDER_NUMBER
         self.base_url = "https://api.kavenegar.com"
         self.url_inventory = UrlInventory()
         # self.proxy_url = settings.server_proxy_url
@@ -17,7 +15,6 @@ class SmsService:
         try:
             api = KavenegarAPI(apikey=self.api_key)
             params = {
-                "sender": self.sender_number,
                 "receptor": receiver,
                 "message": message,
             }

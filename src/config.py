@@ -25,7 +25,6 @@ class Settings:
 
     # * config for the sms service
     sms_service_api_key = getenv("SMS_SERVICE_API_KEY")
-    sms_service_sender_number = getenv("SMS_SERVICE_SENDER_NUMBER")
 
     # * config for the reddis db
     redis_url = getenv("REDIS_URL")
