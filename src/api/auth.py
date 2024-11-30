@@ -77,23 +77,33 @@ async def register(register_data: auth_schema.ReqRegisterUser):
 
 
 @router.post("/login/password", response_model=auth_schema.RespLogin)
-async def login_by_password(form_data: auth_schema.ReqLoginPassword):
+async def login_by_password(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    OAuth2-compliant login endpoint using form-encoded data.
+    """
+    # Extract the username and password from the form data
     user_name = form_data.username
     password = form_data.password
 
+    # Fetch the user from the database
     user_instance = await user.get_user_by_user_name(user_name=user_name)
     if not user_instance:
-        raise HTTPException(status_code=400, detail="Invalid Credentials")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid credentials"
+        )
 
+    # Validate the password
     passport_id = user_instance.get("passport_id")
     auth_passport = await auth.get_auth_passport_by_id(auth_passport_id=passport_id)
     password_hash = auth_passport.get("password_hash")
 
     is_authenticated = passutil.verify_pwd(plain=password, password_hash=password_hash)
-
     if not is_authenticated:
-        raise HTTPException(status_code=401, detail="Invalid Credentials")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        )
 
+    # Generate access and refresh tokens
     user_id = str(user_instance.get("_id"))
     resp = {
         "access_token": auth_core.create_access_token(user_id=user_id),
@@ -140,9 +150,8 @@ async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
     refresh_token_exp = decoded_refresh_token.get("exp")
     current_time = datetime.now()
 
-    if refresh_token_exp and int(refresh_token_exp) > current_time:
-        refresh_token_ttl = int(refresh_token_exp - current_time)
-        redis.setex(refresh_token.refresh_token, refresh_token_ttl, "blacklisted")
+    refresh_token_ttl = int(refresh_token_exp - current_time)
+    redis.setex(refresh_token.refresh_token, refresh_token_ttl, "blacklisted")
 
     # Generate new tokens
     resp = dict(
