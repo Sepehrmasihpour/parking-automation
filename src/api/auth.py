@@ -120,7 +120,7 @@ async def issue_otp(user_id=Depends(dependecies.jwt_required)):
     otp_token = await otp.generate_otp(user_id=user_id)
     sms_service = SmsService()
     sms_service.send_sms(
-        receiver=user_instance.get("phone_number"),
+        receptor=user_instance.get("phone_number"),
         message=f"your otp token:\n{otp_token}",
     )
     return {"msg": "otp sent to the user phone number"}
