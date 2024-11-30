@@ -32,3 +32,7 @@ class ReqPostUpdateRole(BaseModel):
 
 class ReqPostRefresh(BaseModel):
     refresh_token: str
+
+
+class ReqPostValidateVerify(BaseModel):
+    otp: str

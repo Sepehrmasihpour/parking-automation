@@ -113,9 +113,12 @@ async def issue_otp(user_id=Depends(dependecies.jwt_required)):
     return {"msg": "otp sent to the user phone number"}
 
 
-@router.post("/validate/otp/verify", response_model=common_schema.CommonMessage)
-async def verify_otp(given_otp: str, user_id=Depends(dependecies.jwt_required)):
-    is_otp_correct = await otp.validate_otp(otp_token=given_otp, user_id=user_id)
+@router.post("/validate/verify", response_model=common_schema.CommonMessage)
+async def verify_otp(
+    given_otp: auth_schema.ReqPostValidateVerify,
+    user_id=Depends(dependecies.jwt_required),
+):
+    is_otp_correct = await otp.validate_otp(otp_token=given_otp.otp, user_id=user_id)
     if not is_otp_correct:
         raise HTTPException(status_code=400, detail="Invalid OTP")
     await user.update_user_instance(id=user_id, update_query={"validated": True})
@@ -126,20 +129,20 @@ async def verify_otp(given_otp: str, user_id=Depends(dependecies.jwt_required)):
 async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
 
     # Check if the refresh token is blacklisted
-    if redis.get(refresh_token) == "blacklisted":
+    if redis.get(refresh_token.refresh_token) == "blacklisted":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token is blacklisted",
         )
 
-    decoded_refresh_token = auth_core.decode_jwt(refresh_token)
+    decoded_refresh_token = auth_core.decode_jwt(refresh_token.refresh_token)
     token_user_id = decoded_refresh_token.get("user_id")
     refresh_token_exp = decoded_refresh_token.get("exp")
     current_time = datetime.now()
 
     if refresh_token_exp and int(refresh_token_exp) > current_time:
         refresh_token_ttl = int(refresh_token_exp - current_time)
-        redis.setex(refresh_token, refresh_token_ttl, "blacklisted")
+        redis.setex(refresh_token.refresh_token, refresh_token_ttl, "blacklisted")
 
     # Generate new tokens
     resp = dict(
