@@ -13,8 +13,8 @@ class Settings:
 
     # * The code for the jwt auth
     jwt_secret = getenv("JWT_SECRET_KEY")
-    jwt_access_secs = int(getenv("JWT_ACCESS_SECS"))
-    jwt_refresh_secs = int(getenv("JWT_REFRESH_SECS"))
+    jwt_access_hours = int(getenv("JWT_ACCESS_HOURS"))
+    jwt_refresh_hours = int(getenv("JWT_REFRESH_HOURS"))
     jwt_algorithm = getenv("JWT_ALGORITHM")
 
     # * the config for the app itself
