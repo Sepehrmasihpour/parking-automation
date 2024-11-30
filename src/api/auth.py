@@ -139,7 +139,7 @@ async def verify_otp(
 async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
 
     # Check if the refresh token is blacklisted
-    if redis.get(refresh_token.refresh_token) == "blacklisted":
+    if await redis.get(refresh_token.refresh_token) == "blacklisted":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token is blacklisted",
@@ -151,7 +151,7 @@ async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
     current_time = datetime.now()
 
     refresh_token_ttl = int(refresh_token_exp - current_time)
-    redis.setex(refresh_token.refresh_token, refresh_token_ttl, "blacklisted")
+    await redis.setex(refresh_token.refresh_token, refresh_token_ttl, "blacklisted")
 
     # Generate new tokens
     resp = dict(
@@ -179,7 +179,7 @@ async def logout(access_token=Depends(dependecies.get_access_token)):
         raise HTTPException(status_code=401, detail="Token already expired")
 
     # Blacklist the token by storing it in Redis with the TTL
-    redis.setex(access_token, ttl, "blacklisted")
+    await redis.setex(access_token, ttl, "blacklisted")
 
     return common_schema.CommonMessage(message="Successfully logged out")
 

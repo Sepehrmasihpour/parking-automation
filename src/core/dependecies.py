@@ -27,7 +27,9 @@ async def jwt_required(token=Depends(get_access_token)):
     access_token = token
 
     # Check if token is blacklisted
-    is_blacklisted = True if redis_client.get(access_token) == "blacklisted" else False
+    is_blacklisted = (
+        True if await redis_client.get(access_token) == "blacklisted" else False
+    )
     if is_blacklisted:
         raise HTTPException(status_code=401, detail="Token has been revoked")
 
