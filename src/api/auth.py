@@ -119,11 +119,18 @@ async def issue_otp(user_id=Depends(dependecies.jwt_required)):
     user_id = user_instance.get("_id")
     otp_token = await otp.generate_otp(user_id=user_id)
     sms_service = SmsService()
-    sms_service.send_sms(
-        receiver=user_instance.get("phone_number"),
-        message=f"your otp token:\n{otp_token}",
-    )
-    return {"msg": "otp sent to the user phone number"}
+    try:
+
+        sms_service.send_sms(
+            receiver=user_instance.get("phone_number"),
+            message=f"your otp token:\n{otp_token}",
+        )
+        return {"msg": "otp sent to the user phone number"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"the sms service is not avaliblble.\nOTP:{otp_token}\nerror:{str(e)}",
+        )
 
 
 @router.post("/validate/verify", response_model=common_schema.CommonMessage)
