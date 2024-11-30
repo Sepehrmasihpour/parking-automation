@@ -123,7 +123,7 @@ async def verify_otp(given_otp: str, user_id=Depends(dependecies.jwt_required)):
 
 
 @router.post("/refresh", response_model=auth_schema.RespRefreshToken)
-async def refresh_token(refresh_token: str):
+async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
 
     # Check if the refresh token is blacklisted
     if redis.get(refresh_token) == "blacklisted":
