@@ -15,6 +15,7 @@ class SmsService:
         try:
             api = KavenegarAPI(apikey=self.api_key)
             params = {
+                "sender": "",
                 "receptor": receiver,
                 "message": message,
             }
