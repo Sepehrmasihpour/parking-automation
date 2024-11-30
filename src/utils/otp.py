@@ -25,7 +25,7 @@ async def generate_otp(user_id: Union[str, ObjectId]):
 async def validate_otp(otp_token: str, user_id: Union[str, ObjectId]):
 
     # Retrieve the user's data and the auth passport to get the OTP secret
-    user_data = await user.get_user_by_id(user_id=user_id)
+    user_data = await user.get_user_by_id(id=user_id)
     auth_passport_id = user_data.get("passport_id")
     auth_passport = await auth.get_auth_passport_by_id(
         auth_passport_id=auth_passport_id
