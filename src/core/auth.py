@@ -14,8 +14,8 @@ load_dotenv()
 # Configuration
 JWT_SECRET = os.getenv("JWT_SECRET_KEY")  # Matches .env variable
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")  # Defaults to HS256
-JWT_ACCESS_TOKEN_EXPIRY_PER_HOURS = int(os.getenv("JWT_ACCESS_HOUR"))
-JWT_REFRESH_TOKEN_EXPIRY_PER_HOURS = int(os.getenv("JWT_REFRESH_HOUR"))
+JWT_ACCESS_TOKEN_EXPIRY_PER_HOURS = int(os.getenv("JWT_ACCESS_HOURS"))
+JWT_REFRESH_TOKEN_EXPIRY_PER_HOURS = int(os.getenv("JWT_REFRESH_HOURS"))
 
 
 class Password:
