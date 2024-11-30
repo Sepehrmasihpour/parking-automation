@@ -160,7 +160,7 @@ async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
     refresh_token_exp = decoded_refresh_token.get("exp")
     current_time = datetime.now()
 
-    refresh_token_ttl = int(refresh_token_exp - current_time)
+    refresh_token_ttl = int(refresh_token_exp) - current_time
     await redis.setex(refresh_token.refresh_token, refresh_token_ttl, "blacklisted")
 
     # Generate new tokens
