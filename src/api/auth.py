@@ -136,22 +136,22 @@ async def verify_otp(
 
 
 @router.post("/refresh", response_model=auth_schema.RespRefreshToken)
-async def refresh_token(refresh_token: str):
+async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
 
     # Check if the refresh token is blacklisted
-    if redis.get(refresh_token) == "blacklisted":
+    if redis.get(refresh_token.refresh_token) == "blacklisted":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token is blacklisted",
         )
 
-    decoded_refresh_token = auth_core.decode_jwt(refresh_token)
+    decoded_refresh_token = auth_core.decode_jwt(refresh_token.refresh_token)
     token_user_id = decoded_refresh_token.get("user_id")
     refresh_token_exp = decoded_refresh_token.get("exp")
     current_time = datetime.now()
 
     refresh_token_ttl = int(refresh_token_exp - current_time)
-    redis.setex(refresh_token, refresh_token_ttl, "blacklisted")
+    redis.setex(refresh_token.refresh_token, refresh_token_ttl, "blacklisted")
 
     # Generate new tokens
     resp = dict(
