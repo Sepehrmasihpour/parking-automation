@@ -158,7 +158,7 @@ async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
     decoded_refresh_token = auth_core.decode_jwt(refresh_token.refresh_token)
     token_user_id = decoded_refresh_token.get("user_id")
     refresh_token_exp = decoded_refresh_token.get("exp")
-    current_time = datetime.now()
+    current_time = datetime.now().timestamp()
 
     refresh_token_ttl = int(refresh_token_exp) - current_time
     await redis.setex(refresh_token.refresh_token, refresh_token_ttl, "blacklisted")
