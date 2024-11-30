@@ -1,5 +1,6 @@
 from src.config import settings
 import httpx
+from fastapi import HTTPException
 
 API_KEY = settings.sms_service_api_key
 
@@ -14,22 +15,27 @@ class SmsService:
     def send_sms(self, receptor: str, message: str):
 
         url = f"https://api.kavenegar.com/v1/{self.api_key}/sms/send.json"
-        payload = {
+        params = {
             "receptor": receptor,
             "message": message,
         }
 
         try:
-            response = httpx.post(url, json=payload, timeout=10)
+            response = httpx.post(url, params=params, timeout=10)
             response.raise_for_status()
             decoded_response = self._decode_response(response)
             return decoded_response
         except httpx.RequestError as e:
-            return {
-                "error": f"An error occurred while sending the request: {self._decode_response(str(e))}"
-            }
+            raise HTTPException(
+                status_code=500,
+                detail=f"An error occurred while sending the request: {self._decode_response(str(e))}",
+            )
+
         except httpx.HTTPStatusError as e:
-            return {"error": f"HTTP error occurred: {self._decode_response(str(e))}"}
+            raise HTTPException(
+                status_code=500,
+                detail=f"HTTP error occurred: {self._decode_response(str(e))}",
+            )
 
     def _decode_response(self, msg: str):
         try:
