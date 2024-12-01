@@ -35,7 +35,7 @@ def increase_balance(amount: int, user_id=Depends(dependecies.jwt_required)):
     return {"msg": encoded_payment_action}
 
 
-@router.post("/addBalance/pay", responde_model=common_schema.CommonMessage)
+@router.post("/addBalance/pay", response_model=common_schema.CommonMessage)
 def pay_add_balance_bill(encoded_bill: str):
     try:
         decoded_bill = auth_core.decode_jwt(encoded_bill)
