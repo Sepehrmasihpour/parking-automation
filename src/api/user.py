@@ -27,7 +27,7 @@ async def get_user(user_id=Depends(dependecies.jwt_required)):
         )
 
 
-@router.get("/addBalance/issue/{amount}", response_mmodel=common_schema.CommonMessage)
+@router.get("/addBalance/issue/{amount}", response_model=common_schema.CommonMessage)
 def increase_balance(amount: int, user_id=Depends(dependecies.jwt_required)):
     encoded_payment_action = auth_core.encode_charge_acount_response(
         amount=amount, user_id=user_id
