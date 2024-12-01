@@ -25,7 +25,7 @@ class Settings:
     # * config for the reddis db
     redis_url = getenv("REDIS_URL")
 
-    parking_price = getenv("PARKING_PRICE")
+    parking_price = int(getenv("PARKING_PRICE"))
 
 
 settings = Settings()
