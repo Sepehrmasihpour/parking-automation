@@ -16,7 +16,6 @@ class Auth(BaseModel):
 class AuthPassport(BaseModel):
     id: ObjectId = Field(default_factory=ObjectId, alias="_id")
     password_hash: Optional[str] = None
-    otp_secret: str
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 

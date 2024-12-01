@@ -1,18 +1,12 @@
 import pyotp
-from fastapi import APIRouter, HTTPException, Depends, status, security
-from fastapi.security import (
-    HTTPAuthorizationCredentials,
-    HTTPBearer,
-    OAuth2PasswordRequestForm,
-)
-from src.db import user, auth, parking
+from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordRequestForm
+from src.db import user, auth
 from src.db import redis_client as redis
 from src.schemas import auth as auth_schema
 from src.schemas import common as common_schema
 from src.core import auth as auth_core
-from src.services import SmsService
 from src.core import dependecies
-from src.utils import otp
 from datetime import datetime
 
 router = APIRouter()
@@ -34,33 +28,13 @@ async def register(register_data: auth_schema.ReqRegisterUser):
             status_code=status.HTTP_409_CONFLICT,
             detail=f"this username '{register_data.user_name}' is already taken",
         )
-
-    is_phone_number_taken = (
-        True
-        if await user.get_user_by_phone_number(register_data.phone_number) is not None
-        else False
-    )
-
-    if is_phone_number_taken:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"this phone number '{register_data.phone_number}' is already taken",
-        )
     password_hash = passutil.secure_pwd(raw_password=register_data.raw_password)
 
-    totp = pyotp.TOTP(pyotp.random_base32())
-    otp_secret = totp.secret
-
-    auth_passport_instance = auth.AuthPassport(
-        password_hash=None, otp_secret=otp_secret
-    )
-    parking_history_instance = parking.ParkingHistory()
+    auth_passport_instance = auth.AuthPassport(password_hash=None)
     user_instance = user.User(
         user_name=register_data.user_name,
-        phone_number=register_data.phone_number,
         created_at=datetime.now(),
         passport_id=auth_passport_instance.id,
-        parking_history_id=parking_history_instance.id,
     )
 
     await auth.create_auth(user_id=user_instance.id)
@@ -70,8 +44,6 @@ async def register(register_data: auth_schema.ReqRegisterUser):
         passport_id=auth_passport_instance.id,
         user_id=user_instance.id,
     )
-    await parking.create_parking_history_instance(parking_history_instance)
-
     await user.create_user(user_data=user_instance)
     return {"msg": "Registered"}
 
@@ -110,39 +82,6 @@ async def login_by_password(form_data: OAuth2PasswordRequestForm = Depends()):
         "refresh_token": auth_core.create_refresh_token(user_id=user_id),
     }
     return resp
-
-
-@router.post("/validate/issue", response_model=common_schema.CommonMessage)
-async def issue_otp(user_id=Depends(dependecies.jwt_required)):
-    user_instance = await user.get_user_by_id(id=user_id)
-
-    user_id = user_instance.get("_id")
-    otp_token = await otp.generate_otp(user_id=user_id)
-    sms_service = SmsService()
-    try:
-
-        sms_service.send_sms(
-            receiver=user_instance.get("phone_number"),
-            message=f"your otp token:\n{otp_token}",
-        )
-        return {"msg": "otp sent to the user phone number"}
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"the sms service is not avaliblble.\nOTP:{otp_token}\nerror:{str(e)}",
-        )
-
-
-@router.post("/validate/verify", response_model=common_schema.CommonMessage)
-async def verify_otp(
-    given_otp: auth_schema.ReqPostValidateVerify,
-    user_id=Depends(dependecies.jwt_required),
-):
-    is_otp_correct = await otp.validate_otp(otp_token=given_otp.otp, user_id=user_id)
-    if not is_otp_correct:
-        raise HTTPException(status_code=400, detail="Invalid OTP")
-    await user.update_user_instance(id=user_id, update_query={"validated": True})
-    return {"msg": "the acount has been validated"}
 
 
 @router.post("/refresh", response_model=auth_schema.RespRefreshToken)
@@ -192,20 +131,3 @@ async def logout(access_token=Depends(dependecies.get_access_token)):
     await redis.setex(access_token, ttl, "blacklisted")
 
     return common_schema.CommonMessage(message="Successfully logged out")
-
-
-@router.post("/Update/role", response_model=common_schema.CommonMessage)
-async def change_user_role(
-    payload: auth_schema.ReqPostUpdateRole,
-    is_admin=Depends(dependecies.admin_is_required),
-):
-    try:
-        if is_admin:
-            await user.update_user_instance(
-                id=payload.target_user_id, update_query={"role": payload.role}
-            )
-            return {"msg": "role updated"}
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )

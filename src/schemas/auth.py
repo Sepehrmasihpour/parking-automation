@@ -4,7 +4,6 @@ from typing import Union, Literal
 
 class ReqRegisterUser(BaseModel):
     user_name: str
-    phone_number: str
     raw_password: str
 
 

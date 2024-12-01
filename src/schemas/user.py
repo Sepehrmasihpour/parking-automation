@@ -17,3 +17,8 @@ class RespGetPlan(BaseModel):
     id: str
     expiry_date: datetime
     user_id: str
+
+
+class ReqAddBalanceUpdate(BaseModel):
+    user_id: str
+    amount: int

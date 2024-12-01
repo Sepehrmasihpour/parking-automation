@@ -2,14 +2,18 @@ from pydantic import BaseModel
 
 
 class ReqPostEnterExit(BaseModel):
-    parking_id: str
-    ticket_id: str
+    id: str
 
 
 class RespPostTicket(BaseModel):
     ticket_id: str
 
 
-class ReqPostCreate(BaseModel):
-    price: int
-    name: str
+class ReqPostTicketUpdateExpiry(BaseModel):
+    ticket_id: str
+    expiry_date: str
+
+
+class ReqAddBalanceUpdate(BaseModel):
+    user_id: str
+    amount: int

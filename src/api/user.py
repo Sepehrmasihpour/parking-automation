@@ -4,25 +4,23 @@ from src.schemas import user as user_schema
 from src.schemas import common as common_schema
 from datetime import datetime, timedelta
 from src.core import dependecies
+from src.core import auth as auth_core
 from bson import ObjectId
-from src.utils import pagination
 
 router = APIRouter()
 
 
-@router.get("/status", response_model=user_schema.RespGetUser)
+@router.get("/data", response_model=user_schema.RespGetUser)
 async def get_user(user_id=Depends(dependecies.jwt_required)):
     try:
 
         user_data = await user.get_user_by_id(user_id)
         serialized_data = user_schema.RespGetUser(
-            id=user_data.get("_id"),
+            id=auth_core.encode_parking_response(user_data.get("_id")),
             user_name=user_data.get("user_name"),
-            phone_number=user_data.get("phone_number"),
-            validated=user_data.get("validated"),
             passport_id=user_data.get("passport_id"),
-            parking_history_id=user_data.get("parking_history_id"),
             created_at=user_data.get("created_at"),
+            balance=user_data.get("balance"),
         )
         return serialized_data
     except Exception as e:
@@ -31,43 +29,41 @@ async def get_user(user_id=Depends(dependecies.jwt_required)):
         )
 
 
-@router.get("/tickets", response_model=pagination.PaginatedResponse)
-async def get_user_tickets(
-    page_params: pagination.PaginationParams, user_id=Depends(dependecies.jwt_required)
-):
-    try:
-
-        tickets = await ticket.get_usable_ticket_by_user_id(
-            id=user_id, limit=page_params.per_page, skip=page_params.page
-        )
-        document_count = await ticket.get_ticket_count(
-            {
-                "user_id": ObjectId(user_id),
-                "active": True,
-                "expiry_date": {"$gt": datetime.now()},
-            }
-        )
-        page = pagination.paginate(
-            paginated_items=tickets, pagination_params=page_params, total=document_count
-        )
-        return page
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
-
-
-@router.get("/plan", response_model=user_schema.RespGetPlan)
-async def get_user_plan(user_id=Depends(dependecies.jwt_required)):
-    user_plan = await plan.get_plan_by_user_id(id=user_id)
-    if user_plan is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="no plan with this user_id found",
-        )
-    serialized_plan = user_schema.RespGetPlan(
-        id=str(user_plan.get("_id")),
-        expiry_date=user_plan.get("expiry_date"),
-        user_id=user_id,
+@router.get("/addBalance/issue/{amount}", response_mmodel=common_schema.CommonMessage)
+def increase_balance(amount: int, user_id=Depends(dependecies.jwt_required)):
+    encoded_payment_action = auth_core.encode_charge_acount_response(
+        amount=amount, user_id=user_id
     )
-    return serialized_plan
+    return {"msg": encoded_payment_action}
+
+
+@router.post("/addBalance/pay", responde_model=common_schema.CommonMessage)
+def pay_add_balance_bill(encoded_bill: str):
+    try:
+        decoded_bill = auth_core.decode_jwt(encoded_bill)
+    except auth_core.JWTDecodeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid bill: {e}"
+        )
+    user_id = decoded_bill.get("user_id")
+    amount = decoded_bill.get("amount")
+    #! here will be the logic for the card reader and if successfull it will call the add balnce encpoint
+    return {"msg": f"pay {amount} for charging acount"}
+
+
+@router.post("/addBalance/update", response_model=common_schema.CommonMessage)
+async def update_user_balance(
+    payload: user_schema.ReqAddBalanceUpdate,
+    current_user=Depends(dependecies.jwt_required),
+):
+    current_user_data = await user.get_user_by_id(current_user)
+    user_is_admin = True if current_user_data.get("admin") else False
+    if not user_is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="you need to be admin"
+        )
+    user_current_balance = await user.get_user_by_id(payload.user_id).get("balance")
+    await user.update_user_instance(
+        payload.user_id, {"balance": user_current_balance + payload.amount}
+    )
+    return {"msg": f"{payload.amount} added to the user balance"}

@@ -21,13 +21,11 @@ class Settings:
     webserver_port = getenv("WEBSERVER_PORT")
     webserver_host = getenv("WEBSERVER_HOST")
     worker_count = multiprocessing.cpu_count() * 2 + 1
-    broker_uri = getenv("BROKER_URI")
-
-    # * config for the sms service
-    sms_service_api_key = getenv("SMS_SERVICE_API_KEY")
 
     # * config for the reddis db
     redis_url = getenv("REDIS_URL")
+
+    parking_price = getenv("PARKING_PRICE")
 
 
 settings = Settings()

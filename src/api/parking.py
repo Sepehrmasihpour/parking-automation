@@ -1,147 +1,167 @@
-from fastapi import APIRouter, HTTPException, Depends, status
-from src.db import parking, ticket, plan, user
+from fastapi import APIRouter, HTTPException, status
+from src.db import ticket, user
 from src.schemas import parking as parking_schema
 from src.schemas import common as common_schema
 from datetime import datetime, timedelta
-from src.core import dependecies
-from typing import Optional
-from bson import ObjectId
+from src.core import auth as auth_core
+from src.config import settings
 
 router = APIRouter()
 
 
-@router.post("/create", response_model=common_schema.CommonMessage)
-async def create_parking_instance(
-    payload: parking_schema.ReqPostCreate,
-    is_admin=Depends(dependecies.admin_is_required),
-):
+@router.post("/ticket", response_model=parking_schema.RespPostTicket)
+async def create_ticket():
     try:
-        if is_admin:
-            parking_instance = parking.Parking(price=payload.price, name=payload.name)
-            await parking.create_parking_instance(parking_data=parking_instance)
-            return {"msg": "the parking has been added to the data base"}
+
+        parking_price = settings.parking_price
+        ticket_data = ticket.Ticket(
+            expiry_date=datetime.now().timestamp()
+            + timedelta(
+                minutes=30
+            ),  #! After payment this should change to 24 hours or something
+            price=parking_price,
+        )
+        await ticket.create_ticket(ticket_data)
+        ticket_id = ticket_data.id
+        return {
+            "ticket_id": auth_core.encode_parking_response(ticket_id=str(ticket_id))
+        }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
 
 
-@router.post("/ticket/user", response_model=parking_schema.RespPostTicket)
-async def create_ticket(parking_id: str, user_id=Depends(dependecies.jwt_required)):
-    user_plan = await plan.get_plan_by_user_id(id=user_id)
-    if user_plan is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="You do not have any plan"
+@router.post("/ticket/updateExpiry", response_model=common_schema.CommonMessage)
+async def update_ticket_expiry(payload: parking_schema.ReqPostTicketUpdateExpiry):
+    try:
+        await ticket.update_ticket_by_id(
+            payload.ticket_id, {"expiry_date": payload.expiry_date}
         )
-    plan_is_expired = True if user_plan.get("expiry_date") < datetime.now() else False
-
-    if plan_is_expired:
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="your plan has expired"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
-    ticket_data = ticket.Ticket(
-        expiry_date=datetime.now() + timedelta(hours=24),
-        user_id=ObjectId(user_id),
-        parking_id=ObjectId(parking_id),
-        is_paid=True,
-    )
-    user_data = await user.get_user_by_id(user_id)
-    parking_history_id = user_data.get("parking_history_id")
-    await parking.add_parking_to_parking_history(parking_history_id, parking_id)
-    await ticket.create_ticket(ticket_data)
-    ticket_id = ticket_data.id
-    return {"ticket_id": str(ticket_id)}
-
-
-@router.post("/ticket/guest", response_model=parking_schema.RespPostTicket)
-async def create_ticket(parking_id: str):
-    parking_data = await parking.get_parking_by_id(parking_id)
-    parking_price = parking_data.get("price")
-    ticket_data = ticket.Ticket(
-        expiry_date=datetime.now() + timedelta(minutes=30),
-        parking_id=ObjectId(parking_id),
-        price=parking_price,
-    )
-    await ticket.create_ticket(ticket_data)
-    ticket_id = ticket_data.id
-    return {"ticket_id": str(ticket_id)}
-
-
-@router.delete("/ticket", response_model=common_schema.CommonMessage)
-async def delete_ticket(ticket_id: str, user_id=Depends(dependecies.jwt_required)):
-    await ticket.delete_ticket_by_id(ticket_id)
-    return {"msg": "ticket deleted"}
 
 
 @router.post("/enter", response_model=common_schema.CommonMessage)
 async def enter_parking(payload: parking_schema.ReqPostEnterExit):
-    ticket_data = await ticket.get_ticket_by_id(payload.ticket_id)
-    if ticket_data is None:
+    try:
+        decoded_id = auth_core.decode_jwt(payload.id)
+    except auth_core.JWTDecodeError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No ticket with this id was found",
-        )
-    ticket_parking_id = ticket_data.get("parking_id")
-    if not str(ticket_parking_id) == str(payload.parking_id):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="this ticket is not for this parking",
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid ID: {e}"
         )
 
-    ticket_expiry_date = ticket_data.get("expiry_date")
-    if ticket_expiry_date < datetime.now():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="the expiry date for the ticket has passed",
-        )
-    if ticket.get("used_for_entry"):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="You already used this ticket for entry",
-        )
-    if not ticket.get("is_paid"):
-        # * The logic for physical card reader in the location goes here
-        # * if the reader returns true than the below will happed"
-        await ticket.update_ticket_by_id(payload.ticket_id, {"is_paid": True})
+    user_id_present = decoded_id.get("user_id") is not None
+    ticket_id_present = decoded_id.get("ticket_id") is not None
 
-    # * The logic for opening the gate goes here
-    await ticket.update_ticket_by_id(
-        id=payload.ticket_id, update_query={"used_for_entry": True}
-    )
+    if user_id_present == ticket_id_present:
+        # Both are present or both are absent
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid ID format: must contain either 'user_id' or 'ticket_id', but not both.",
+        )
 
-    return {"msg": "the gate opened"}
+    if ticket_id_present:
+        ticket_data = await ticket.get_ticket_by_id(decoded_id.get("ticket_id"))
+        if ticket_data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No ticket with this ID was found.",
+            )
+
+        ticket_expiry_date = ticket_data.get("expiry_date")
+        if ticket_expiry_date < datetime.now():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="The expiry date for the ticket has passed.",
+            )
+        if ticket_data.get("used_for_entry"):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="You have already used this ticket for entry.",
+            )
+        if not ticket_data.get("is_paid"):
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"Payment required: {ticket_data.get('price')}",
+            )
+        await ticket.update_ticket_by_id(
+            id=decoded_id.get("ticket_id"), update_query={"used_for_entry": True}
+        )
+        return {"msg": "Open entry gate for guest"}
+
+    if user_id_present:
+        user_data = await user.get_user_by_id(decoded_id.get("user_id"))
+        if user_data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No user with this ID was found.",
+            )
+        user_balance = user_data.get("balance")
+        if user_balance is None or user_balance < settings.parking_price:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Not enough balance."
+            )
+        await user.update_user_instance(
+            decoded_id.get("user_id"),
+            {"balance": user_balance - settings.parking_price},
+        )
+        return {"msg": "Open entry gate for user"}
 
 
 @router.post("/exit", response_model=common_schema.CommonMessage)
-async def enter_parking(payload: parking_schema.ReqPostEnterExit):
-    ticket_data = await ticket.get_ticket_by_id(payload.ticket_id)
-    if ticket_data is None:
+async def exit_parking(payload: parking_schema.ReqPostEnterExit):
+    try:
+        decoded_id = auth_core.decode_jwt(payload.id)
+    except auth_core.JWTDecodeError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No ticket with this id was found",
-        )
-    ticket_parking_id = ticket_data.get("parking_id")
-    if not str(ticket_parking_id) == str(payload.parking_id):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="this ticket is not for this parking",
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid ID: {e}"
         )
 
-    ticket_expiry_date = ticket_data.get("expiry_date")
-    if ticket_expiry_date < datetime.now():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="the expiry date for the ticket has passed",
-        )
-    if ticket.get("used_for_exit"):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="You already used this ticket for entry",
-        )
-    # * The logic for closing the gate goes here
+    user_id_present = decoded_id.get("user_id") is not None
+    ticket_id_present = decoded_id.get("ticket_id") is not None
 
-    await ticket.update_ticket_by_id(
-        id=payload.ticket_id, update_query={"used_for_exit": True, "active": False}
-    )
+    if user_id_present == ticket_id_present:
+        # Both are present or both are absent
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid ID format: must contain either 'user_id' or 'ticket_id', but not both.",
+        )
 
-    return {"msg": "the gate opened"}
+    if ticket_id_present:
+        ticket_data = await ticket.get_ticket_by_id(decoded_id.get("ticket_id"))
+        if ticket_data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No ticket with this ID was found.",
+            )
+
+        ticket_expiry_date = ticket_data.get("expiry_date")
+        if ticket_expiry_date < datetime.now():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="The expiry date for the ticket has passed.",
+            )
+        if ticket_data.get("used_for_exit"):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="You have already used this ticket for exit.",
+            )
+
+        await ticket.update_ticket_by_id(
+            id=decoded_id.get("ticket_id"),
+            update_query={"used_for_exit": True, "active": False},
+        )
+        return {"msg": "Open exit gate for guest"}
+
+    if user_id_present:
+        user_data = await user.get_user_by_id(decoded_id.get("user_id"))
+        if user_data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No user with this ID was found.",
+            )
+
+        return {"msg": "Open exit gate for user"}

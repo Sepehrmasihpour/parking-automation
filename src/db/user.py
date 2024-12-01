@@ -9,12 +9,10 @@ from datetime import datetime
 class User(BaseModel):
     id: ObjectId = Field(default_factory=ObjectId, alias="_id")
     user_name: str
-    phone_number: str
-    validated: bool = False
     passport_id: ObjectId
-    parking_history_id: ObjectId
+    balance: Optional[int] = None
     created_at: datetime
-    role: Optional[Literal["admin"]] = None
+    admin: Optional[bool] = False
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -43,16 +41,6 @@ async def get_user_by_id(id: Union[str, ObjectId]):
 
         id = ObjectId(id) if isinstance(id, str) else id
         data = await db.user.find_one({"_id": id})
-        return data
-    except PyMongoError as e:
-        print(f"db error:{e}")
-    except Exception as e:
-        print(f"error:{e}")
-
-
-async def get_user_by_phone_number(phone_number: str):
-    try:
-        data = await db.user.find_one({"phone_number": phone_number})
         return data
     except PyMongoError as e:
         print(f"db error:{e}")

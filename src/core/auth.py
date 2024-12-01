@@ -7,6 +7,7 @@ from passlib.context import CryptContext
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from src.db import redis_client as redis
 from fastapi import HTTPException, status
+from typing import Optional
 
 # Load environment variables
 load_dotenv()
@@ -89,9 +90,6 @@ def decode_jwt(jwtoken: str):
     try:
         payload = jwt.decode(jwtoken, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
-    except ExpiredSignatureError:
-        print("Token has expired.")
-        return None
     except InvalidTokenError:
         print("Invalid token.")
         return None
@@ -111,3 +109,43 @@ def parse_authorization_token(token: str) -> str:
         return parts[1]
     except Exception as e:
         raise ValueError(f"Error parsing token: {str(e)}")
+
+
+def encode_parking_response(
+    ticket_id: Optional[str] = None, user_id: Optional[str] = None
+) -> str:
+    """
+    Create a JWT token encoding either a ticket_id or a user_id.
+    Exactly one of ticket_id or user_id must be provided.
+    """
+    # Enforce XOR condition between ticket_id and user_id
+    if (ticket_id is None and user_id is None) or (
+        ticket_id is not None and user_id is not None
+    ):
+        raise ValueError("Exactly one of ticket_id or user_id must be provided.")
+
+    # Include the provided identifier in the token payload
+    if ticket_id is not None:
+        to_encode = {"ticket_id": ticket_id}
+    else:
+        to_encode = {"user_id": user_id}
+
+    try:
+        # Encode the JWT token
+        encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    except Exception as e:
+        raise ValueError(f"Error creating access token: {str(e)}")
+
+    return encoded_jwt
+
+
+def encode_charge_acount_response(amount: int, user_id: str):
+
+    to_encode = {"user_id": user_id, "amount": amount}
+    try:
+        # Encode the JWT token
+        encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    except Exception as e:
+        raise ValueError(f"Error creating access token: {str(e)}")
+
+    return encoded_jwt
