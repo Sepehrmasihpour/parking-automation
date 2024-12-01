@@ -12,8 +12,3 @@ class RespPostTicket(BaseModel):
 class ReqPostTicketUpdateExpiry(BaseModel):
     ticket_id: str
     expiry_date: str
-
-
-class ReqAddBalanceUpdate(BaseModel):
-    user_id: str
-    amount: int
