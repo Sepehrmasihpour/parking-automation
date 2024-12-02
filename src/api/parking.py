@@ -54,6 +54,11 @@ async def enter_parking(payload: parking_schema.ReqPostEnterExit):
                 detail="No ticket with this ID was found.",
             )
 
+        if not ticket_data.get("active"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="this ticket is inactive"
+            )
+
         ticket_expiry_date = ticket_data.get("expiry_date")
         if ticket_expiry_date < datetime.now():
             raise HTTPException(
@@ -85,11 +90,15 @@ async def enter_parking(payload: parking_schema.ReqPostEnterExit):
         user_balance = user_data.get("balance")
         if user_balance is None or user_balance < settings.parking_price:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Not enough balance."
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"Payment required: {ticket_data.get('price')}",
             )
         await user.update_user_instance(
             payload.id,
-            {"balance": user_balance - settings.parking_price},
+            {
+                "balance": user_balance - settings.parking_price,
+                "last_enterd": datetime.now(),
+            },
         )
         return {"msg": "Open entry gate for user"}
 
@@ -108,6 +117,11 @@ async def exit_parking(payload: parking_schema.ReqPostEnterExit):
                 detail="No ticket with this ID was found.",
             )
 
+        if not ticket_data.get("active"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="this ticket is inactive"
+            )
+
         ticket_expiry_date = ticket_data.get("expiry_date")
         if ticket_expiry_date < datetime.now():
             raise HTTPException(
@@ -118,6 +132,11 @@ async def exit_parking(payload: parking_schema.ReqPostEnterExit):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="You have already used this ticket for exit.",
+            )
+        if not ticket_data.get("is_paid"):
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"Payment required: {ticket_data.get('price')}",
             )
 
         await ticket.update_ticket_by_id(
@@ -133,5 +152,19 @@ async def exit_parking(payload: parking_schema.ReqPostEnterExit):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No user with this ID was found.",
             )
+        last_entered = user_data.get("last_enterd")
+    if last_entered is None:
+        # User has never entered
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Payment required: User has not entered in the last 12 hours.",
+        )
+
+    time_since_last_entered = datetime.now() - last_entered
+    if time_since_last_entered > timedelta(hours=12):
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Payment required: User's entry is older than 12 hours.",
+        )
 
         return {"msg": "Open exit gate for user"}

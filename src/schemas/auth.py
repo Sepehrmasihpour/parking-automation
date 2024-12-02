@@ -1,9 +1,9 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Union, Literal
 
 
 class ReqRegisterUser(BaseModel):
-    email: EmailStr
+    user_name: str
     raw_password: str
 
 

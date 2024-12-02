@@ -1,5 +1,5 @@
 from src.db import db
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ConfigDict
 from bson import ObjectId
 from typing import Union, Dict, Optional, Literal
 from pymongo.errors import PyMongoError
@@ -8,12 +8,12 @@ from datetime import datetime
 
 class User(BaseModel):
     id: ObjectId = Field(default_factory=ObjectId, alias="_id")
-    user_name: EmailStr
+    user_name: str
     passport_id: ObjectId
-    validated: bool = False
     balance: Optional[int] = None
     created_at: datetime
     admin: Optional[bool] = False
+    last_enterd: Optional[datetime] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -27,7 +27,7 @@ async def create_user(user_data: User):
         print(f"error:{e}")
 
 
-async def get_user_by_user_name(user_name: EmailStr):
+async def get_user_by_user_name(user_name: str):
     try:
         data = await db.user.find_one({"user_name": user_name})
         return data

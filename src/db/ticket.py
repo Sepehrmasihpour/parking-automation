@@ -14,6 +14,7 @@ class Ticket(BaseModel):
     is_paid: bool = False
     used_for_entry: bool = False
     used_for_exit: bool = False
+    active: bool = True
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
