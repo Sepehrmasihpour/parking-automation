@@ -35,7 +35,7 @@ async def jwt_required(token=Depends(get_access_token)):
 
     decoded = auth.decode_jwt(jwtoken=access_token)
     if not decoded:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token or expired")
 
     user_id = decoded.get("user_id")
     if not user_id:

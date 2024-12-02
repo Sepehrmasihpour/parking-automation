@@ -8,6 +8,7 @@ from src.schemas import common as common_schema
 from src.core import auth as auth_core
 from src.core import dependecies
 from datetime import datetime
+import time
 
 router = APIRouter()
 passutil = auth_core.Password()
@@ -86,7 +87,6 @@ async def login_by_password(form_data: OAuth2PasswordRequestForm = Depends()):
 
 @router.post("/refresh", response_model=auth_schema.RespRefreshToken)
 async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
-
     # Check if the refresh token is blacklisted
     if await redis.get(refresh_token.refresh_token) == "blacklisted":
         raise HTTPException(
@@ -95,11 +95,24 @@ async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
         )
 
     decoded_refresh_token = auth_core.decode_jwt(refresh_token.refresh_token)
+    if not decoded_refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
+
     token_user_id = decoded_refresh_token.get("user_id")
     refresh_token_exp = decoded_refresh_token.get("exp")
-    current_time = datetime.now().timestamp()
+    current_time = int(time.time())
 
-    refresh_token_ttl = int(refresh_token_exp) - current_time
+    refresh_token_ttl = refresh_token_exp - current_time
+    if refresh_token_ttl <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has expired",
+        )
+
+    # Blacklist the used refresh token
     await redis.setex(refresh_token.refresh_token, refresh_token_ttl, "blacklisted")
 
     # Generate new tokens
