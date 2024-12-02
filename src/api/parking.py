@@ -3,7 +3,6 @@ from src.db import ticket, user
 from src.schemas import parking as parking_schema
 from src.schemas import common as common_schema
 from datetime import datetime, timedelta
-from src.core import auth as auth_core
 from src.config import settings
 
 router = APIRouter()
@@ -23,9 +22,7 @@ async def create_ticket():
         )
         await ticket.create_ticket(ticket_data)
         ticket_id = ticket_data.id
-        return {
-            "ticket_id": auth_core.encode_parking_response(ticket_id=str(ticket_id))
-        }
+        return {"ticket_id": str(ticket_id)}
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
@@ -46,25 +43,11 @@ async def update_ticket_expiry(payload: parking_schema.ReqPostTicketUpdateExpiry
 
 @router.post("/enter", response_model=common_schema.CommonMessage)
 async def enter_parking(payload: parking_schema.ReqPostEnterExit):
-    try:
-        decoded_id = auth_core.decode_jwt(payload.id)
-    except auth_core.JWTDecodeError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid ID: {e}"
-        )
-
-    user_id_present = decoded_id.get("user_id") is not None
-    ticket_id_present = decoded_id.get("ticket_id") is not None
-
-    if user_id_present == ticket_id_present:
-        # Both are present or both are absent
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid ID format: must contain either 'user_id' or 'ticket_id', but not both.",
-        )
+    user_id_present = payload.type == "user"
+    ticket_id_present = payload.type == "ticket"
 
     if ticket_id_present:
-        ticket_data = await ticket.get_ticket_by_id(decoded_id.get("ticket_id"))
+        ticket_data = await ticket.get_ticket_by_id(payload.id)
         if ticket_data is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -88,12 +71,12 @@ async def enter_parking(payload: parking_schema.ReqPostEnterExit):
                 detail=f"Payment required: {ticket_data.get('price')}",
             )
         await ticket.update_ticket_by_id(
-            id=decoded_id.get("ticket_id"), update_query={"used_for_entry": True}
+            id=payload.id, update_query={"used_for_entry": True}
         )
         return {"msg": "Open entry gate for guest"}
 
     if user_id_present:
-        user_data = await user.get_user_by_id(decoded_id.get("user_id"))
+        user_data = await user.get_user_by_id(payload.id)
         if user_data is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -105,7 +88,7 @@ async def enter_parking(payload: parking_schema.ReqPostEnterExit):
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not enough balance."
             )
         await user.update_user_instance(
-            decoded_id.get("user_id"),
+            payload.id,
             {"balance": user_balance - settings.parking_price},
         )
         return {"msg": "Open entry gate for user"}
@@ -113,25 +96,12 @@ async def enter_parking(payload: parking_schema.ReqPostEnterExit):
 
 @router.post("/exit", response_model=common_schema.CommonMessage)
 async def exit_parking(payload: parking_schema.ReqPostEnterExit):
-    try:
-        decoded_id = auth_core.decode_jwt(payload.id)
-    except auth_core.JWTDecodeError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid ID: {e}"
-        )
 
-    user_id_present = decoded_id.get("user_id") is not None
-    ticket_id_present = decoded_id.get("ticket_id") is not None
-
-    if user_id_present == ticket_id_present:
-        # Both are present or both are absent
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid ID format: must contain either 'user_id' or 'ticket_id', but not both.",
-        )
+    user_id_present = payload.type == "user"
+    ticket_id_present = payload.type == "ticket"
 
     if ticket_id_present:
-        ticket_data = await ticket.get_ticket_by_id(decoded_id.get("ticket_id"))
+        ticket_data = await ticket.get_ticket_by_id(payload.id)
         if ticket_data is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -151,13 +121,13 @@ async def exit_parking(payload: parking_schema.ReqPostEnterExit):
             )
 
         await ticket.update_ticket_by_id(
-            id=decoded_id.get("ticket_id"),
+            id=payload.id,
             update_query={"used_for_exit": True, "active": False},
         )
         return {"msg": "Open exit gate for guest"}
 
     if user_id_present:
-        user_data = await user.get_user_by_id(decoded_id.get("user_id"))
+        user_data = await user.get_user_by_id(payload.id)
         if user_data is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

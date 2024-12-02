@@ -24,11 +24,6 @@ class RespRefreshToken(BaseModel):
     token_type: str = "bearer"
 
 
-class ReqPostUpdateRole(BaseModel):
-    target_user_id: str
-    role: Union[Literal["admin"], None]
-
-
 class ReqPostRefresh(BaseModel):
     refresh_token: str
 

@@ -1,8 +1,10 @@
 from pydantic import BaseModel
+from typing import Literal
 
 
 class ReqPostEnterExit(BaseModel):
     id: str
+    type: Literal["ticket", "user"]
 
 
 class RespPostTicket(BaseModel):

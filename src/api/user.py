@@ -3,7 +3,6 @@ from src.db import user
 from src.schemas import user as user_schema
 from src.schemas import common as common_schema
 from src.core import dependecies
-from src.core import auth as auth_core
 
 router = APIRouter()
 
