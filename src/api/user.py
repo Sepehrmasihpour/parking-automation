@@ -26,7 +26,7 @@ async def get_user(user_id=Depends(dependecies.jwt_required)):
 
 
 @router.post("/addBalance/issue", response_model=common_schema.CommonMessage)
-async def pay_add_balance_bill(payload: user_schema.ReqAddPostBalanceIssue):
+async def pay_add_balance_bill(payload: user_schema.ReqPostAddBalanceIssue):
     user_data = await user.get_user_by_id(payload.user_id)
     if user_data is None:
         raise HTTPException(
