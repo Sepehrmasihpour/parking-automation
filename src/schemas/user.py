@@ -6,10 +6,7 @@ from typing import Literal, Union
 class RespGetUser(BaseModel):
     id: str
     user_name: str
-    phone_number: str
-    validated: bool
     passport_id: str
-    parking_history_id: str
     created_at: datetime
 
 
@@ -20,5 +17,10 @@ class RespGetPlan(BaseModel):
 
 
 class ReqAddBalanceUpdate(BaseModel):
+    user_id: str
+    amount: int
+
+
+class ReqAddPostBalanceIssue:
     user_id: str
     amount: int

@@ -14,10 +14,8 @@ async def get_user(user_id=Depends(dependecies.jwt_required)):
 
         user_data = await user.get_user_by_id(user_id)
         serialized_data = user_schema.RespGetUser(
-            id=auth_core.encode_parking_response(user_data.get("_id")),
+            id=str(user_data.get("_id")),
             user_name=user_data.get("user_name"),
-            passport_id=user_data.get("passport_id"),
-            created_at=user_data.get("created_at"),
             balance=user_data.get("balance"),
         )
         return serialized_data
@@ -27,41 +25,24 @@ async def get_user(user_id=Depends(dependecies.jwt_required)):
         )
 
 
-@router.get("/addBalance/issue/{amount}", response_model=common_schema.CommonMessage)
-def increase_balance(amount: int, user_id=Depends(dependecies.jwt_required)):
-    encoded_payment_action = auth_core.encode_charge_acount_response(
-        amount=amount, user_id=user_id
-    )
-    return {"msg": encoded_payment_action}
-
-
-@router.post("/addBalance/pay", response_model=common_schema.CommonMessage)
-def pay_add_balance_bill(encoded_bill: str):
-    try:
-        decoded_bill = auth_core.decode_jwt(encoded_bill)
-    except auth_core.JWTDecodeError as e:
+@router.post("/addBalance/issue", response_model=common_schema.CommonMessage)
+async def pay_add_balance_bill(payload: user_schema.ReqAddPostBalanceIssue):
+    user_data = await user.get_user_by_id(payload.user_id)
+    if user_data is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid bill: {e}"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="no user found with this id found",
         )
-    user_id = decoded_bill.get("user_id")
-    amount = decoded_bill.get("amount")
     #! here will be the logic for the card reader and if successfull it will call the add balnce encpoint
-    return {"msg": f"pay {amount} for charging acount"}
-
-
-@router.post("/addBalance/update", response_model=common_schema.CommonMessage)
-async def update_user_balance(
-    payload: user_schema.ReqAddBalanceUpdate,
-    current_user=Depends(dependecies.jwt_required),
-):
-    current_user_data = await user.get_user_by_id(current_user)
-    user_is_admin = True if current_user_data.get("admin") else False
-    if not user_is_admin:
+    payment_successful = True
+    if not payment_successful:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="you need to be admin"
+            status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="payment failed"
         )
-    user_current_balance = await user.get_user_by_id(payload.user_id).get("balance")
+    user_balance = user_data.get("balance")
     await user.update_user_instance(
-        payload.user_id, {"balance": user_current_balance + payload.amount}
+        payload.user_id, {"balance": user_balance + payload.amount}
     )
-    return {"msg": f"{payload.amount} added to the user balance"}
+    return {
+        "msg": f"the acount with the user_id of {payload.user_id} has been charged with the amount of {payload.amount}.\nthis messge will be there if the treansaction is successfull and here we assume that it was successfull"
+    }
