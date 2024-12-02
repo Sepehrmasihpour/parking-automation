@@ -88,7 +88,8 @@ async def login_by_password(form_data: OAuth2PasswordRequestForm = Depends()):
 @router.post("/refresh", response_model=auth_schema.RespRefreshToken)
 async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
     # Check if the refresh token is blacklisted
-    if await redis.get(refresh_token.refresh_token) == "blacklisted":
+    redis_value = await redis.get(refresh_token.refresh_token)
+    if redis_value is not None and redis_value.decode("utf-8") == "blacklisted":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token is blacklisted",
@@ -105,7 +106,7 @@ async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
     refresh_token_exp = decoded_refresh_token.get("exp")
     current_time = int(time.time())
 
-    refresh_token_ttl = refresh_token_exp - current_time
+    refresh_token_ttl = int(refresh_token_exp - current_time)
     if refresh_token_ttl <= 0:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
