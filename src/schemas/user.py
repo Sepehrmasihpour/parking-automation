@@ -6,8 +6,8 @@ from typing import Literal, Union
 class RespGetUser(BaseModel):
     id: str
     user_name: str
-    passport_id: str
     created_at: datetime
+    balance: int
 
 
 class RespGetPlan(BaseModel):
@@ -21,6 +21,6 @@ class ReqAddBalanceUpdate(BaseModel):
     amount: int
 
 
-class ReqAddPostBalanceIssue:
+class ReqPostAddBalanceIssue(BaseModel):
     user_id: str
     amount: int
