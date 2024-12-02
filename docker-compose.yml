@@ -19,6 +19,8 @@ services:
       - WEBSERVER_HOST=${WEBSERVER_HOST}
       - WEBSERVER_PORT=${WEBSERVER_PORT}
       - PARKING_PRICE=${PARKING_PRICE}
+      - EMAIL_ADDRESS=${EMAIL_ADDRESS}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
     volumes:
       - .:/app
     networks:
