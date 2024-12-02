@@ -27,5 +27,8 @@ class Settings:
 
     parking_price = int(getenv("PARKING_PRICE"))
 
+    email_password = getenv("EMAIL_PASSWORD")
+    email_address = getenv("EMAIL_ADDRESS")
+
 
 settings = Settings()

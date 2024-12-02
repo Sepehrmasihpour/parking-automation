@@ -1,5 +1,5 @@
 import pyotp
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from src.db import user, auth
 from src.db import redis_client as redis
@@ -8,6 +8,7 @@ from src.schemas import common as common_schema
 from src.core import auth as auth_core
 from src.core import dependecies
 from datetime import datetime
+from src.utils import email
 
 router = APIRouter()
 passutil = auth_core.Password()
@@ -18,21 +19,20 @@ async def register(register_data: auth_schema.ReqRegisterUser):
 
     is_user_name_taken = (
         True
-        if await user.get_user_by_user_name(user_name=register_data.user_name)
-        is not None
+        if await user.get_user_by_user_name(user_name=register_data.email) is not None
         else False
     )
 
     if is_user_name_taken:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"this username '{register_data.user_name}' is already taken",
+            detail=f"this username '{register_data.email}' is already taken",
         )
     password_hash = passutil.secure_pwd(raw_password=register_data.raw_password)
 
     auth_passport_instance = auth.AuthPassport(password_hash=None)
     user_instance = user.User(
-        user_name=register_data.user_name,
+        user_name=register_data.email,
         created_at=datetime.now(),
         passport_id=auth_passport_instance.id,
     )
@@ -131,3 +131,43 @@ async def logout(access_token=Depends(dependecies.get_access_token)):
     await redis.setex(access_token, ttl, "blacklisted")
 
     return common_schema.CommonMessage(message="Successfully logged out")
+
+
+@router.get("/validation/issue", response_model=common_schema.CommonMessage)
+async def send_validation_email(
+    request: Request,
+    user_id=Depends(dependecies.jwt_required),
+):
+    # Retrieve user data
+    user_data = await user.get_user_by_id(user_id)
+    user_email = user_data.get("user_name")  # Assuming 'user_name' is the email
+
+    if not user_email:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User email not found"
+        )
+
+    # Create a token with a short expiration time
+    token = auth_core.create_access_token(user_id, expires_delta=1)
+
+    validation_link = request.url_for("confirm_validation_email", token)
+
+    # Send the validation email
+    await email.send_email(
+        to=user_email,
+        subject="Email Validation",
+        message=f"Click the link below to validate your email address:\n\n{validation_link}",
+    )
+
+    return {"msg": "The validation link has been sent via email"}
+
+
+@router.get("/validation/confirm/{token}", response_model=common_schema.CommonMessage)
+async def confirm_validation_email(token: str):
+    try:
+        decoded_token = auth_core.decode_jwt(token)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    user_id = decoded_token.get("user_id")
+    await user.update_user_instance(user_id, {"validated": True})
+    return {"msg": "user validated"}

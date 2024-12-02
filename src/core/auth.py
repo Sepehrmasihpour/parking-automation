@@ -90,6 +90,8 @@ def decode_jwt(jwtoken: str):
     try:
         payload = jwt.decode(jwtoken, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
+    except ExpiredSignatureError:
+        print("expired token.")
     except InvalidTokenError:
         print("Invalid token.")
         return None
