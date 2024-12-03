@@ -60,8 +60,8 @@ async def user_is_validated(user_id=Depends(jwt_required)):
 
 async def admin_is_required(user_id=Depends(jwt_required)):
     user_data = await user.get_user_by_id(user_id)
-    user_role = user_data.get("role")
-    if not user_role == "admin":
+    user_is_admin = user_data.get("admin")
+    if not user_is_admin:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="you do not have permission",
