@@ -89,7 +89,7 @@ async def get_door_key(user_id=Depends(dependecies.jwt_required)):
     return {"token": encoded_jwt}
 
 
-@router.post("/addBalance/create", response_model=user_schema.RespPostAddBalanceCreate)
+@router.get("/addBalance/create", response_model=user_schema.RespPostAddBalanceCreate)
 async def create_add_balance_token(
     amount: int, user_id=Depends(dependecies.jwt_required)
 ):

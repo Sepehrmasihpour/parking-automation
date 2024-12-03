@@ -63,7 +63,7 @@ def validate_and_sanitize_token(token_str: str):
     return payload
 
 
-@router.post("/ticket", response_model=parking_schema.RespPostTicket)
+@router.get("/ticket", response_model=parking_schema.RespPostTicket)
 async def create_ticket():
     try:
 
