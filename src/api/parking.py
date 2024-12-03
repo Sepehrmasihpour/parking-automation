@@ -155,7 +155,7 @@ async def enter_parking(
                 **({"active": False} if door == "exit" else {}),
             },
         )
-        return {"msg": f"Open {door} gate for guest"}
+        return {"msg": f"Open {door} gate for guest without pay(demo)"}
 
     elif token_type == "user":
         # Process user logic
@@ -176,7 +176,9 @@ async def enter_parking(
                             "last_entered": datetime.now(),
                         },
                     )
-                    return {"msg": f"Open {door} gate for user (demo)"}
+                    return {
+                        "msg": f"Open {door} gate for user with not enough funds(demo)"
+                    }
                 else:
                     raise HTTPException(
                         status_code=status.HTTP_402_PAYMENT_REQUIRED,

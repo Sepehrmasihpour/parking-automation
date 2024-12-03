@@ -109,7 +109,7 @@ async def create_add_balance_token(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="internal error"
         )
-    return encoded_jwt
+    return {"token": encoded_jwt}
 
 
 @router.post("/addBalance", response_model=common_schema.CommonMessage)
