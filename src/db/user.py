@@ -10,7 +10,7 @@ class User(BaseModel):
     id: ObjectId = Field(default_factory=ObjectId, alias="_id")
     user_name: str
     passport_id: ObjectId
-    balance: Optional[int] = None
+    balance: int = 0
     created_at: datetime
     admin: Optional[bool] = False
     last_enterd: Optional[datetime] = None

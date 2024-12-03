@@ -165,7 +165,7 @@ async def enter_parking(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No user with this ID was found.",
             )
-        user_balance = user_data.get("balance", 0)
+        user_balance = user_data.get("balance")
         if door == "entry":
             if user_balance < settings.parking_price:
                 if payment_successfull:
