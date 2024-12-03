@@ -76,7 +76,7 @@ async def get_user(user_id=Depends(dependecies.jwt_required)):
         )
 
 
-@router.get("/key", response_model=user_schema.RespGetKey)
+@router.get("/key", response_model=common_schema.Token)
 async def get_door_key(user_id=Depends(dependecies.jwt_required)):
     expiry_date = datetime.now() + timedelta(minutes=10)
     to_encode = {"user_id": user_id, "exp": expiry_date, "type": "user"}
@@ -86,7 +86,7 @@ async def get_door_key(user_id=Depends(dependecies.jwt_required)):
         )
     except Exception as e:
         raise ValueError(f"Error creating refresh token: {str(e)}")
-    return encoded_jwt
+    return {"token": encoded_jwt}
 
 
 @router.post("/addBalance/create", response_model=user_schema.RespPostAddBalanceCreate)
