@@ -100,29 +100,6 @@ async def create_ticket():
         )
 
 
-@router.post("/ticket/updateExpiry", response_model=common_schema.CommonMessage)
-async def update_ticket_expiry(
-    payload: parking_schema.ReqPostTicketUpdateExpiry,
-    current_user_id=Depends(dependecies.jwt_required),
-):
-    current_user = await user.get_user_by_id(current_user_id)
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="no user found"
-        )
-    if not current_user.get("is_admin"):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-    try:
-        await ticket.update_ticket_by_id(
-            payload.ticket_id, {"expiry_date": payload.expiry_date}
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="failed to update the db",
-        )
-
-
 @router.post("/open/{door}", response_model=common_schema.CommonMessage)
 async def enter_parking(
     door: Literal["entry", "exit"],
