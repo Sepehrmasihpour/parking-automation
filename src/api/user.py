@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import jwt
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from src.core import auth as auth_core
-from config import settings
+from src.config import settings
 from bson import ObjectId
 
 router = APIRouter()

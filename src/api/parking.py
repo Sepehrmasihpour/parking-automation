@@ -7,7 +7,7 @@ from src.config import settings
 from typing import Literal, Optional
 from src.core import dependecies
 from src.core import auth as auth_core
-from config import settings
+from src.config import settings
 import jwt
 from bson import ObjectId
 
