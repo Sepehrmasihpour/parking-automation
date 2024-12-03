@@ -91,13 +91,18 @@ def decode_jwt(jwtoken: str):
         payload = jwt.decode(jwtoken, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
     except ExpiredSignatureError:
-        print("expired token.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired."
+        )
     except InvalidTokenError:
-        print("Invalid token.")
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token."
+        )
     except Exception as e:
-        print(f"Error decoding token: {str(e)}")
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="internal server error",
+        )
 
 
 def parse_authorization_token(token: str) -> str:

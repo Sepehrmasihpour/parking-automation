@@ -24,25 +24,23 @@ async def create_ticket(ticket_data: Ticket):
         await db.ticket.insert_one(ticket_data.model_dump(by_alias=True))
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise
 
 
 async def get_ticket_by_id(id: Union[str, ObjectId]):
     try:
         id = ObjectId(id) if isinstance(id, str) else id
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid plan ID format.",
-        )
-    try:
         ticket = await db.ticket.find_one({"_id": id})
         return ticket
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise
 
 
 async def update_ticket_by_id(id: Union[str, ObjectId], update_query: Dict):
@@ -57,8 +55,10 @@ async def update_ticket_by_id(id: Union[str, ObjectId], update_query: Dict):
         await db.ticket.update_one({"_id": id}, {"$set": update_query})
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise
 
 
 async def delete_ticket_by_id(id: Union[str, ObjectId]):
@@ -73,5 +73,7 @@ async def delete_ticket_by_id(id: Union[str, ObjectId]):
         await db.ticket.delete_one({"_id": id})
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise

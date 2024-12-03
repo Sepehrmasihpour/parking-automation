@@ -27,9 +27,7 @@ async def jwt_required(token=Depends(get_access_token)):
     access_token = token
 
     # Check if token is blacklisted
-    is_blacklisted = (
-        True if await redis_client.get(access_token) == "blacklisted" else False
-    )
+    is_blacklisted = await redis_client.get(access_token)
     if is_blacklisted:
         raise HTTPException(status_code=401, detail="Token has been revoked")
 
@@ -40,6 +38,11 @@ async def jwt_required(token=Depends(get_access_token)):
     user_id = decoded.get("user_id")
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
+    user_data = await user.get_user_by_id(user_id)
+    if user_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="user not found"
+        )
 
     return user_id
 
@@ -58,7 +61,7 @@ async def user_is_validated(user_id=Depends(jwt_required)):
 async def admin_is_required(user_id=Depends(jwt_required)):
     user_data = await user.get_user_by_id(user_id)
     user_role = user_data.get("role")
-    if not user_role == "adming":
+    if not user_role == "admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="you do not have permission",

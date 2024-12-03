@@ -26,8 +26,10 @@ async def create_auth(user_id: Union[ObjectId, str]):
         await db.auth.insert_one(auth_instance.model_dump(by_alias=True))
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise
 
 
 async def create_auth_passport(auth_passport: AuthPassport):
@@ -35,8 +37,10 @@ async def create_auth_passport(auth_passport: AuthPassport):
         await db.auth_passport.insert_one(auth_passport.model_dump(by_alias=True))
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise
 
 
 async def update_new_password(
@@ -61,8 +65,10 @@ async def update_new_password(
         )
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise
 
 
 async def get_auth_passport_by_id(auth_passport_id: Union[ObjectId, str]):
@@ -77,5 +83,7 @@ async def get_auth_passport_by_id(auth_passport_id: Union[ObjectId, str]):
         return data
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise

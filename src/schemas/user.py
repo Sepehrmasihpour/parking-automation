@@ -4,9 +4,7 @@ from typing import Literal, Union
 
 
 class RespGetUser(BaseModel):
-    id: str
     user_name: str
-    created_at: datetime
     balance: int
 
 
@@ -21,6 +19,10 @@ class ReqAddBalanceUpdate(BaseModel):
     amount: int
 
 
-class ReqPostAddBalanceIssue(BaseModel):
+class ReqPostAddBalance(BaseModel):
     user_id: str
     amount: int
+
+
+class RespPostAddBalanceCreate(BaseModel):
+    token: str

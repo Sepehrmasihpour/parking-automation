@@ -8,7 +8,7 @@ class ReqPostEnterExit(BaseModel):
 
 
 class RespPostTicket(BaseModel):
-    ticket_id: str
+    token: str
 
 
 class ReqPostTicketUpdateExpiry(BaseModel):

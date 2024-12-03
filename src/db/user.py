@@ -23,8 +23,10 @@ async def create_user(user_data: User):
         await db.user.insert_one(user_data.model_dump(by_alias=True))
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise
 
 
 async def get_user_by_user_name(user_name: str):
@@ -33,8 +35,10 @@ async def get_user_by_user_name(user_name: str):
         return data
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise
 
 
 async def get_user_by_id(id: Union[str, ObjectId]):
@@ -45,8 +49,10 @@ async def get_user_by_id(id: Union[str, ObjectId]):
         return data
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise
 
 
 async def update_user_instance(id: Union[str, ObjectId], update_query: Dict):
@@ -55,5 +61,7 @@ async def update_user_instance(id: Union[str, ObjectId], update_query: Dict):
         await db.user.update_one({"_id": id}, {"$set": update_query})
     except PyMongoError as e:
         print(f"db error:{e}")
+        raise
     except Exception as e:
         print(f"error:{e}")
+        raise
