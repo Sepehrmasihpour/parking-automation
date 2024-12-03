@@ -5,7 +5,7 @@ from typing import Literal, Union
 
 class RespGetUser(BaseModel):
     user_name: str
-    balance: int
+    balance: Union[int, None]
 
 
 class RespGetPlan(BaseModel):

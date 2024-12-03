@@ -72,7 +72,7 @@ async def get_user(user_id=Depends(dependecies.jwt_required)):
         return serialized_data
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="internal error"
         )
 
 
@@ -85,7 +85,9 @@ async def get_door_key(user_id=Depends(dependecies.jwt_required)):
             to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm
         )
     except Exception as e:
-        raise ValueError(f"Error creating refresh token: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="internal error"
+        )
     return {"token": encoded_jwt}
 
 
@@ -105,7 +107,7 @@ async def create_add_balance_token(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="internal error"
         )
     return encoded_jwt
 
