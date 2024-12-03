@@ -108,125 +108,119 @@ async def enter_parking(
     payment_successfull: Optional[bool] = None,
 ):
     decoded_token = validate_and_sanitize_token(token.token)
-    user_id_present = decoded_token.get("type") == "user"
-    ticket_id_present = decoded_token.get("type") == "ticket"
+    token_type = decoded_token.get("type")
+    token_id = decoded_token.get("id")
 
-    if ticket_id_present:
-        ticket_data = await ticket.get_ticket_by_id(decoded_token.get("id"))
-        if ticket_data is None:
+    if token_type == "ticket":
+        # Process ticket logic
+        ticket_data = await ticket.get_ticket_by_id(token_id)
+        if not ticket_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No ticket with this ID was found.",
             )
-
         if not ticket_data.get("active"):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="this ticket is inactive"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This ticket is inactive.",
             )
-
-        ticket_expiry_date = ticket_data.get("expiry_date")
-        if ticket_expiry_date < datetime.now():
+        if ticket_data.get("expiry_date") < datetime.now():
+            await ticket.update_ticket_by_id(token_id, {"active": False})
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="The expiry date for the ticket has passed.",
             )
-        is_used = (
-            ticket_data.get("used_for_entry")
-            if door == "entry"
-            else ticket_data.get("used_for_exit")
-        )
-        if is_used:
+        is_used_key = "used_for_entry" if door == "entry" else "used_for_exit"
+        if ticket_data.get(is_used_key):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="You have already used this ticket for entry.",
+                detail=f"You have already used this ticket for {door}.",
             )
         if not ticket_data.get("is_paid"):
-            if payment_successfull is not None and payment_successfull:
+            if payment_successfull:
                 new_expiry_date = datetime.now() + timedelta(hours=12)
                 await ticket.update_ticket_by_id(
-                    decoded_token.get("id"),
+                    token_id,
                     {"expiry_date": new_expiry_date, "is_paid": True},
                 )
             else:
                 raise HTTPException(
                     status_code=status.HTTP_402_PAYMENT_REQUIRED,
                     detail=f"Payment required: {ticket_data.get('price')}",
-                )  #! after the payment is confirmed we will update the ticket expiry time to 12 hours
+                )
         await ticket.update_ticket_by_id(
-            id=decoded_token.get("id"),
-            update_query=(
-                {"used_for_entry": True}
-                if door == "entry"
-                else {"used_for_exit": True, "active": False}
-            ),
+            token_id,
+            {
+                is_used_key: True,
+                **({"active": False} if door == "exit" else {}),
+            },
         )
-
         return {"msg": f"Open {door} gate for guest"}
 
-    if user_id_present:
-        user_data = await user.get_user_by_id(decoded_token.get("id"))
-        if user_data is None:
+    elif token_type == "user":
+        # Process user logic
+        user_data = await user.get_user_by_id(token_id)
+        if not user_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No user with this ID was found.",
             )
+        user_balance = user_data.get("balance", 0)
         if door == "entry":
-
-            user_balance = user_data.get("balance")
-            if user_balance is None or user_balance < settings.parking_price:
-                if payment_successfull is not None and payment_successfull:
-                    pass
+            if user_balance < settings.parking_price:
+                if payment_successfull:
+                    await user.update_user_instance(
+                        token_id,
+                        {
+                            "balance": 0,
+                            "last_entered": datetime.now(),
+                        },
+                    )
+                    return {"msg": f"Open {door} gate for user (demo)"}
                 else:
                     raise HTTPException(
                         status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                        detail=f"Payment required: {ticket_data.get('price')}",
+                        detail=f"Payment required: {settings.parking_price}",
                     )
-            await user.update_user_instance(
-                decoded_token.get("id"),
-                {
-                    "balance": user_balance - settings.parking_price,
-                    "last_enterd": datetime.now(),
-                },
-            )
+            else:
+                new_balance = user_balance - settings.parking_price
+                await user.update_user_instance(
+                    token_id,
+                    {
+                        "balance": new_balance,
+                        "last_entered": datetime.now(),
+                    },
+                )
             return {"msg": f"Open {door} gate for user"}
-        else:
-            last_entered = user_data.get("last_enterd")
-            if last_entered is None:
-                user_balance = user_data.get("balance")
-                if user_balance is None or user_balance < settings.parking_price:
-                    if payment_successfull is not None and payment_successfull:
-                        pass
+
+        elif door == "exit":
+            last_entered = user_data.get("last_entered")
+            if not last_entered or (datetime.now() - last_entered) > timedelta(
+                hours=12
+            ):
+                # Need to charge for exit if no entry recorded or parking time exceeded
+                if user_balance < settings.parking_price:
+                    if payment_successfull:
+                        await user.update_user_instance(
+                            token_id,
+                            {"balance": 0},
+                        )
+                        return {"msg": f"Open {door} gate for user (demo)"}
                     else:
                         raise HTTPException(
                             status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                            detail=f"Payment required: {ticket_data.get('price')}",
+                            detail=f"Payment required: {settings.parking_price}",
                         )
-                await user.update_user_instance(
-                    decoded_token.get("id"),
-                    {
-                        "balance": user_balance - settings.parking_price,
-                        "last_enterd": datetime.now(),
-                    },
-                )
-                return {"msg": f"Open {door} gate for user"}
-
-            time_since_last_entered = datetime.now() - last_entered
-            if time_since_last_entered > timedelta(hours=12):
-                user_balance = user_data.get("balance")
-                if user_balance is None or user_balance < settings.parking_price:
-                    if payment_successfull is not None and payment_successfull:
-                        pass
-                    else:
-                        raise HTTPException(
-                            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                            detail=f"Payment required: {ticket_data.get('price')}",
-                        )
-                await user.update_user_instance(
-                    decoded_token.get("id"),
-                    {
-                        "balance": user_balance - settings.parking_price,
-                        "last_enterd": datetime.now(),
-                    },
-                )
-
+                else:
+                    new_balance = user_balance - settings.parking_price
+                    await user.update_user_instance(
+                        token_id,
+                        {"balance": new_balance},
+                    )
+            # No additional charge if within parking time
             return {"msg": f"Open {door} gate for user"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token type.",
+        )
