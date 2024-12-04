@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="src/templates")
 
 
 def validate_and_sanitize_token(token_str: str):
