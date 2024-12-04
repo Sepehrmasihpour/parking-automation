@@ -1,8 +1,11 @@
 import subprocess
 from src.config import settings
+import asyncio
 from fastapi import FastAPI, HTTPException
-from src.db import db, redis_client
+from src.db import db, redis_client, ticket
 from src.api import auth, parking, user
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 app = FastAPI()
 app.include_router(router=auth.router, prefix="/auth", tags=["Auth"])
@@ -45,11 +48,22 @@ async def healthcheck():
     return {"status": "healthy"}
 
 
+def start_scheduler():
+    scheduler = AsyncIOScheduler()
+    # Schedule the `delete_inactive_tickets` function to run at 12 AM daily
+    scheduler.add_job(
+        lambda: asyncio.run(ticket.delete_inactive_tickets()),
+        CronTrigger(hour=0, minute=0),
+    )
+    scheduler.start()
+
+
 def main():
+    start_scheduler()
     command = [
         "gunicorn",
         "-w",
-        str(settings.worker_count),  # Separate the flag and value
+        str(settings.worker_count),
         "-k",
         "uvicorn.workers.UvicornWorker",
         "--bind",

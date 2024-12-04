@@ -77,3 +77,15 @@ async def delete_ticket_by_id(id: Union[str, ObjectId]):
     except Exception as e:
         print(f"error:{e}")
         raise
+
+
+async def delete_inactive_tickets():
+    try:
+        await db.ticket.delete_many({"active": False})
+        await db.ticket.delete_many({"expiry_date": {"$lt": datetime.datetime.now()}})
+    except PyMongoError as e:
+        print(f"db error:{e}")
+        raise
+    except Exception as e:
+        print(f"error:{e}")
+        raise

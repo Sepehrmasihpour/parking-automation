@@ -25,8 +25,10 @@ class Settings:
     # * config for the reddis db
     redis_url = getenv("REDIS_URL")
 
+    # * for ticket price and charging
     parking_price = int(getenv("PARKING_PRICE"))
 
+    # * for acount validation
     email_password = getenv("EMAIL_PASSWORD")
     email_address = getenv("EMAIL_ADDRESS")
 
