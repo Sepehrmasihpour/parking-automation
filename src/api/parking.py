@@ -102,7 +102,7 @@ async def create_ticket(request: Request):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="internal server error",
+            detail=f"internal server error:{str(e)}",
         )
 
 
