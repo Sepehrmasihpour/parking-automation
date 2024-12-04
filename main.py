@@ -1,11 +1,10 @@
 import subprocess
 from src.config import settings
-import asyncio
 from fastapi import FastAPI, HTTPException
 from src.db import db, redis_client, ticket
 from src.api import auth, parking, user
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 app = FastAPI()
 app.include_router(router=auth.router, prefix="/auth", tags=["Auth"])
@@ -49,17 +48,22 @@ async def healthcheck():
 
 
 def start_scheduler():
+    """
+    Initializes and starts the APScheduler instance.
+    """
     scheduler = AsyncIOScheduler()
-    # Schedule the `delete_inactive_tickets` function to run at 12 AM daily
     scheduler.add_job(
-        lambda: asyncio.run(ticket.delete_inactive_tickets()),
-        CronTrigger(hour=0, minute=0),
+        ticket.delete_inactive_tickets,
+        trigger=IntervalTrigger(hours=12),
+        id="delete_inactive_tickets",  # Unique ID for the job
+        replace_existing=True,  # Replace job if it already exists
     )
     scheduler.start()
+    print("Scheduler started. Scheduled delete_inactive_tickets every 12 hours.")
 
 
 def main():
-    start_scheduler()
+
     command = [
         "gunicorn",
         "-w",
@@ -79,4 +83,5 @@ def main():
 
 
 if __name__ == "__main__":
+    start_scheduler()
     main()
