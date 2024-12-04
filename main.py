@@ -9,8 +9,6 @@ app.include_router(router=auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(router=user.router, prefix="/user", tags=["user"])
 app.include_router(router=parking.router, prefix="/parking", tags=["Parking"])
 
-# * Health check endpoint sophisticate it more later
-
 
 @app.get("/healthcheck")
 async def healthcheck():

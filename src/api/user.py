@@ -78,7 +78,7 @@ async def get_user(user_id=Depends(dependecies.jwt_required)):
 
 @router.get("/key", response_model=common_schema.Token)
 async def get_door_key(user_id=Depends(dependecies.jwt_required)):
-    expiry_date = datetime.now() + timedelta(minutes=10)
+    expiry_date = datetime.now() + timedelta(minutes=1)
     to_encode = {"id": user_id, "exp": expiry_date, "type": "user"}
     try:
         encoded_jwt = jwt.encode(

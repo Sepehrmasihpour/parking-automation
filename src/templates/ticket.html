@@ -1,0 +1,50 @@
+<!-- templates/ticket.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Your Parking Ticket</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 50px;
+      }
+      #qr-code {
+        margin: 20px auto;
+      }
+      #save-button {
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+      #instructions {
+        font-size: 18px;
+      }
+    </style>
+  </head>
+   <!-- ... (instructions) -->
+   <div id="qr-code"></div>
+   <button id="save-button" onclick="downloadQRCode()">Save QR Code</button>
+
+    <!-- Include QRCode.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        // Generate QR code
+        var qrCode = new QRCode(document.getElementById("qr-code"), {
+            text: "{{ token }}",
+            width: 200,
+            height: 200,
+        });
+
+        function downloadQRCode() {
+            var img = document.querySelector('#qr-code img');
+            var link = document.createElement('a');
+            link.href = img.src;
+            link.download = 'parking_ticket_qr.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+  </body>
+</html>

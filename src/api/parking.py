@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from src.db import ticket, user
 from src.schemas import parking as parking_schema
 from src.schemas import common as common_schema
@@ -10,8 +10,12 @@ from src.core import auth as auth_core
 from src.config import settings
 import jwt
 from bson import ObjectId
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
 
 router = APIRouter()
+templates = Jinja2Templates(directory="templates")
 
 
 def validate_and_sanitize_token(token_str: str):
@@ -63,8 +67,8 @@ def validate_and_sanitize_token(token_str: str):
     return payload
 
 
-@router.get("/ticket", response_model=parking_schema.RespPostTicket)
-async def create_ticket():
+@router.get("/ticket", response_class=HTMLResponse)
+async def create_ticket(request: Request):
     try:
 
         parking_price = settings.parking_price
@@ -92,7 +96,9 @@ async def create_ticket():
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="failed to encode the token",
             )
-        return {"token": encoded_jwt}
+        return templates.TemplateResponse(
+            "ticket.html", {"request": request, "token": encoded_jwt}
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
