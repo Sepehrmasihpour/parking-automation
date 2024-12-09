@@ -139,7 +139,7 @@ async def logout(access_token=Depends(dependecies.get_access_token)):
     current_time = datetime.utcnow().timestamp()
     ttl = int(exp - current_time)
     if ttl <= 0:
-        raise HTTPException(status_code=401, detail="Token already expired")
+        return {"msg": "token is already expired"}
 
     # Blacklist the token by storing it in Redis with the TTL
     await redis.setex(access_token, ttl, "blacklisted")
