@@ -139,7 +139,7 @@ async def logout(access_token=Depends(dependecies.get_access_token)):
 
         # Blacklist the token by storing it in Redis with the TTL
         await redis.setex(access_token, ttl, "blacklisted")
-        return common_schema.CommonMessage(message="Successfully logged out")
+        return {"msg": "Successfully logged out"}
 
     except HTTPException as e:
         # Handle specific HTTP 401 error due to expired token
