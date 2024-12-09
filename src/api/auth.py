@@ -128,7 +128,7 @@ async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
 @router.post("/logout", response_model=common_schema.CommonMessage)
 async def logout(access_token=Depends(dependecies.get_access_token)):
 
-    decoded_token = auth.decode_jwt(access_token)
+    decoded_token = auth_core.decode_jwt(access_token)
     if not decoded_token:
         raise HTTPException(status_code=401, detail="Invalid token")
 
