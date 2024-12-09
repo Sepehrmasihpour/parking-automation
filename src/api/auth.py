@@ -127,21 +127,29 @@ async def refresh_token(refresh_token: auth_schema.ReqPostRefresh):
 
 @router.post("/logout", response_model=common_schema.CommonMessage)
 async def logout(access_token=Depends(dependecies.get_access_token)):
+    try:
+        # Attempt to decode the JWT
+        decoded_token = auth_core.decode_jwt(access_token)
+        exp = decoded_token.get("exp")
+        current_time = datetime.utcnow().timestamp()
+        ttl = int(exp - current_time)
 
-    decoded_token = auth_core.decode_jwt(access_token)
-    if not decoded_token:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        if ttl <= 0:
+            return {"msg": "token is already expired"}
 
-    exp = decoded_token.get("exp")
-    if not exp:
-        raise HTTPException(status_code=401, detail="Invalid token: no expiration")
+        # Blacklist the token by storing it in Redis with the TTL
+        await redis.setex(access_token, ttl, "blacklisted")
+        return common_schema.CommonMessage(message="Successfully logged out")
 
-    current_time = datetime.utcnow().timestamp()
-    ttl = int(exp - current_time)
-    if ttl <= 0:
-        return {"msg": "token is already expired"}
-
-    # Blacklist the token by storing it in Redis with the TTL
-    await redis.setex(access_token, ttl, "blacklisted")
-
-    return common_schema.CommonMessage(message="Successfully logged out")
+    except HTTPException as e:
+        # Handle specific HTTP 401 error due to expired token
+        if (
+            e.status_code == status.HTTP_401_UNAUTHORIZED
+            and "Token has expired" in e.detail
+        ):
+            return {"msg": "token is already expired"}
+        # Re-raise other HTTP exceptions
+        raise e
+    except Exception as e:
+        # Re-raise any other exceptions for further handling
+        raise e

@@ -83,26 +83,34 @@ def create_token(user_id: str) -> dict:
         raise ValueError(f"Error creating tokens: {str(e)}")
 
 
-def decode_jwt(jwtoken: str):
-    """
-    Decode a JWT token and return its payload.
-    """
+@router.post("/logout", response_model=common_schema.CommonMessage)
+async def logout(access_token=Depends(dependecies.get_access_token)):
     try:
-        payload = jwt.decode(jwtoken, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload
-    except ExpiredSignatureError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired."
-        )
-    except InvalidTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token."
-        )
+        # Attempt to decode the JWT
+        decoded_token = auth_core.decode_jwt(access_token)
+        exp = decoded_token.get("exp")
+        current_time = datetime.utcnow().timestamp()
+        ttl = int(exp - current_time)
+
+        if ttl <= 0:
+            return {"msg": "token is already expired"}
+
+        # Blacklist the token by storing it in Redis with the TTL
+        await redis.setex(access_token, ttl, "blacklisted")
+        return common_schema.CommonMessage(message="Successfully logged out")
+
+    except HTTPException as e:
+        # Handle specific HTTP 401 error due to expired token
+        if (
+            e.status_code == status.HTTP_401_UNAUTHORIZED
+            and "Token has expired" in e.detail
+        ):
+            return {"msg": "token is already expired"}
+        # Re-raise other HTTP exceptions
+        raise e
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="internal server error",
-        )
+        # Re-raise any other exceptions for further handling
+        raise e
 
 
 def parse_authorization_token(token: str) -> str:
